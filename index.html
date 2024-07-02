@@ -1,12 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>txt2speech.org - Unlimited TTS Convertor</title>
-   <link rel="stylesheet" href="style.css">
-   <script src="jszip.min.js"></script>
-   <script src="epub.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>txt2speech.org - Unlimited TTS Convertor | Convert Text to Speech Online</title>
+    <meta name="description" content="Convert unlimited text to speech with txt2speech.org. Upload TXT files, paste text, or convert EPUB to audio using OpenAI's advanced TTS technology. Free and easy to use!">
+    <meta name="keywords" content="text to speech, TTS, text converter, audio conversion, OpenAI TTS, EPUB to audio, accessibility tool">
+    <meta name="author" content="Myra Krusemark">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://txt2speech.org">
+    <link rel="stylesheet" href="style.css">
+
+    <script src="jszip.min.js"></script>
+    <script src="epub.min.js"></script>
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "txt2speech.org",
+          "url": "https://txt2speech.org",
+          "description": "Convert unlimited text to speech with txt2speech.org. Upload TXT files, paste text, or convert EPUB to audio using OpenAI's advanced TTS technology.",
+          "applicationCategory": "Utility",
+          "operatingSystem": "Any",
+          "offers": {
+            "@type": "Offer",
+            "price": "0"
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Myra Krusemark"
+          }
+        }
+    </script>
 
 </head>
 <body>
@@ -64,7 +91,7 @@
                 </div>
             </div>
             <div id="nabu-casa" class="tab">
-                <p>Note: If running locally (HTTP), you can set Server to you local LAN address (HTTP). on https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.</p>
+                <p>If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.</p>
                 <div class="form-group">
                     <label for="nabu-casa-server">Server Address</label>
                     <input type="text" id="nabu-casa-server" placeholder="Enter Nabu Casa server address">
