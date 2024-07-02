@@ -56,15 +56,15 @@
         
             setInterval(updateCounter, 100); // Update the counter every 100 milliseconds
           </script>
-        <p>Long textual information can be challenging to consume for those who need it but cannot read visually, or for other reasons. This tool provides a simple solution by allowing users to upload text files (TXT), pasted text, or EPUB files of any length and convert the entire content into an audio file using OpenAI's text-to-speech capabilities, making the information more accessible. You can easily generate MP3 files from your text content by following these steps:</p>
+        <p>txt2speech.org is a free, unlimited text-to-speech conversion tool that allows you to easily convert text files, pasted text, or EPUB ebooks into spoken audio using advanced TTS technology. To get started, simply:</p>
+
         <ol>
-            <li>Enter your OpenAI API key in the provided field.</li>
-            <li>Choose an input method</li>
-            <li>Select the desired voice and audio quality.</li>
-            <li>Click the "Convert to Speech" button to start the conversion process.</li>
+            <li>Select your preferred TTS engine (Piper Local, OpenAI, or Nabu Casa) and configure the required settings.</li>
+            <li>Load your text by uploading a file, pasting text, or converting an eBook, then click "Convert to Speech".</li>
         </ol>
-        <p>After the conversion, download links for the generated MP3 files will appear below.</p>
-        <h2>Step 1: Select a TTS engine.</h2>
+
+        <p>Once the conversion is complete, you can download the generated audio file. Ensure you have the rights to convert any text you use and review the <a href="#disclaimer">Disclaimer</a>, <a href="#terms">Terms of Use</a>, and <a href="#data-policy">Data Handling Policy</a> before using this service.</p>
+        <h2>Step 1: Select a TTS engine</h2>
         <div id="tts-engine-tabs" class="tabs">
             <button class="tab-button active" data-tab="piper">Piper Local <span class="badge">RECOMMENDED</span></button>
             <button class="tab-button" data-tab="openai">OpenAI</button>
@@ -115,7 +115,7 @@
                 </select>
             </div>
         </div>
-        <h2>Step 2: Load Text.</h2>
+        <h2>Step 2: Load Text</h2>
         <div id="text-type-tabs" class="tabs">
             <button class="tab-button active" data-tab="upload-txt">Text File</button>
             <button class="tab-button" data-tab="paste-text">Paste Text</button>
@@ -159,7 +159,7 @@
 
 
     <div id="footer">
-        <div class="container">
+        <div id="disclaimer" class="container">
             <h2>Disclaimer</h2>
             <p>Please read the following disclaimer carefully before using this Text to Speech Converter:</p>
             <ul>
@@ -170,7 +170,7 @@
             </ul>
             <p>By using this Text to Speech Converter, you accept this disclaimer in full. If you disagree with any part of this disclaimer, do not use our website.</p>
         </div>
-        <div class="container">
+        <div id="terms" class="container">
             <h2>Terms of Use</h2>
             <p>By using this Text to Speech Converter, you agree to abide by the following terms of use:</p>
             <ul>
@@ -183,7 +183,7 @@
             </ul>
             <p>If you do not agree with any of these terms, please do not use this Text to Speech Converter.</p>
         </div>
-        <div class="container">
+        <div id="data-policy" class="container">
             <h2>Data Handling Policy</h2>
             <p>This section outlines how we handle the data you provide while using this Text to Speech Converter:</p>
             <ul>
