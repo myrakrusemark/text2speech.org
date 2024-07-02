@@ -1,9 +1,9 @@
 import { getCookie } from './utils.js';
 
-const PWV_BASE = `https://piper.wide.video/`;
+const PIPER_BASE = `https://txt2speech.org/piper/`;
 const HF_BASE = `https://huggingface.co/wide-video/piper-voices-v1.0.1/resolve/main/`;
 
-const voicesUrl = `${PWV_BASE}voices.json`;
+const voicesUrl = `${PIPER_BASE}voices.json`;
 
 async function synthesizeSpeech(input, speakerId, blobs, modelUrl, modelConfigUrl) {
     const worker = new Worker(URL.createObjectURL(new Blob([`
@@ -133,9 +133,9 @@ async function synthesizeSpeech(input, speakerId, blobs, modelUrl, modelConfigUr
     `], {type: 'text/javascript'})));
 
     worker.postMessage({kind:"init", input, speakerId, blobs,
-        piperPhonemizeJsUrl: `${PWV_BASE}piper_phonemize.js`, 
-        piperPhonemizeWasmUrl: `${PWV_BASE}piper_phonemize.wasm`, 
-        piperPhonemizeDataUrl: `${PWV_BASE}piper_phonemize.data`, 
+        piperPhonemizeJsUrl: `${PIPER_BASE}piper_phonemize.js`, 
+        piperPhonemizeWasmUrl: `${PIPER_BASE}piper_phonemize.wasm`, 
+        piperPhonemizeDataUrl: `${PIPER_BASE}piper_phonemize.data`, 
         modelUrl, modelConfigUrl});
         
     return new Promise((resolve, reject) => {
