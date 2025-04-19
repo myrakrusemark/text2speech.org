@@ -111,7 +111,7 @@ export async function populateNabuCasaVoiceSelect(server, bearer, engineId) {
             }
         }
     } catch (error) {
-        console.error('Error populating voice select:', error);
+        console.log('Error populating voice select:', error);
     }
 }
 

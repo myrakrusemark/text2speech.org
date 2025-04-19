@@ -11,16 +11,16 @@ export function getCookie(name) {
 
 // Save API keys and bearer tokens
 export async function saveCredentials(openaiApiKey, nabuCasaServer, nabuCasaBearer) {
-    setCookie('openai_api_key', openaiApiKey);
-    setCookie('nabu_casa_server', nabuCasaServer);
-    setCookie('nabu_casa_bearer', nabuCasaBearer);
+    setCookie('openai-api-key', openaiApiKey);
+    setCookie('nabu-casa-server', nabuCasaServer);
+    setCookie('nabu-casa-bearer', nabuCasaBearer);
 }
 
 // Load saved credentials
 export async function loadCredentials() {
-    const openaiApiKey = getCookie('openai_api_key');
-    const nabuCasaServer = getCookie('nabu_casa_server');
-    const nabuCasaBearer = getCookie('nabu_casa_bearer');
+    const openaiApiKey = getCookie('openai-api-key');
+    const nabuCasaServer = getCookie('nabu-casa-server');
+    const nabuCasaBearer = getCookie('nabu-casa-bearer');
     if (openaiApiKey) document.getElementById('openai-api-key').value = openaiApiKey;
     if (nabuCasaServer) document.getElementById('nabu-casa-server').value = nabuCasaServer;
     if (nabuCasaBearer) document.getElementById('nabu-casa-bearer').value = nabuCasaBearer;
@@ -30,20 +30,12 @@ export async function loadCredentials() {
 
 // Function to save app settings
 export async function saveAppSettings(text) {
-    let activeTTSTab = document.querySelector('#tts-engine-tabs .tab-button.active').getAttribute('data-tab');
+    const activeTTSTab = document.querySelector('#tts-engine-tabs .tab-button.active').getAttribute('data-tab');
+    setCookie('active-tts-engine', activeTTSTab);
+    console.log("TTS engine switched to: " + activeTTSTab);
     
-    await new Promise((resolve) => {
-        setTimeout(() => {
-            activeTTSTab = document.querySelector('#tts-engine-tabs .tab-button.active').getAttribute('data-tab');
-            setCookie('active_tts_engine', activeTTSTab);
-            displayEstimatedCost(text, activeTTSTab !== "openai");
-            console.log("TTS engine switched to: " + activeTTSTab);
-            resolve();
-        }, 50);
-    });
-    
-    setCookie('openai_voice', document.getElementById('openai-voice-select').value);
-    setCookie('hd_audio', document.getElementById('hd-audio').checked);
+    setCookie('openai-voice', document.getElementById('openai-voice-select').value);
+    setCookie('hd-audio', document.getElementById('hd-audio').checked);
     setCookie('piper-voice-select', document.getElementById('piper-voice-select').value);
     setCookie('nabu-casa-voice-select', document.getElementById('nabu-casa-voice-select').value);
     
@@ -54,8 +46,8 @@ export async function loadAppSettings() {
     // Load app settings
     const activeTTSTab = setActiveTTSTabOnInit();
     
-    document.getElementById('openai-voice-select').value = getCookie('openai_voice') || document.getElementById('openai-voice-select').value;
-    document.getElementById('hd-audio').checked = getCookie('hd_audio') === 'true';
+    document.getElementById('openai-voice-select').value = getCookie('openai-voice') || document.getElementById('openai-voice-select').value;
+    document.getElementById('hd-audio').checked = getCookie('hd-audio') === 'true';
 
     // See piper-tts.js. The cookie updates the select as it loads.
     //document.getElementById('piper-voice-select').value = getCookie('piper-voice-select') || "en_US-joe-medium";
@@ -70,7 +62,7 @@ export async function loadAppSettings() {
 // Function to set the active tab when loading app settings
 function setActiveTTSTabOnInit() {
     const tabs = document.querySelectorAll('#tts-engine-tabs .tab-button');
-    const activeTTSTab = getCookie('active_tts_engine') || 'piper';
+    const activeTTSTab = getCookie('active-tts-engine') || 'piper';
 
     tabs.forEach(tab => {
         if (tab.getAttribute('data-tab') === activeTTSTab) {
@@ -84,7 +76,7 @@ function setActiveTTSTabOnInit() {
 
 }
 
-export function displayEstimatedCost(text, clear = false) {
+/*export function displayEstimatedCost(text, clear = false) {
     const costPerMilChar = 0.015;
 
     if (clear) {
@@ -95,5 +87,4 @@ export function displayEstimatedCost(text, clear = false) {
         const formattedCost = cost.toFixed(2);
         document.getElementById('estimated-cost').textContent = `($${formattedCost})`;
     }
-}
-
+}*/

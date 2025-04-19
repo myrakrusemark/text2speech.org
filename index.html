@@ -1,324 +1,362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text to Speech Converter</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
     
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B6E87K3E6K"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-B6E87K3E6K');
-    </script>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>txt2speech.org - Unlimited TTS Convertor | Convert Text to Speech Online</title>
-    <meta name="description" content="Convert unlimited text to speech with txt2speech.org. Upload TXT files, paste text, or convert EPUB to audio using OpenAI's advanced TTS technology. Free and easy to use!">
-    <meta name="keywords" content="text to speech, TTS, text converter, audio conversion, OpenAI TTS, EPUB to audio, accessibility tool">
-    <meta name="author" content="Myra Krusemark">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://txt2speech.org">
-    <link rel="stylesheet" href="style.css">
-
-    <script src="jszip.min.js"></script>
-    <script src="epub.min.js"></script>
-
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "txt2speech.org",
-          "url": "https://txt2speech.org",
-          "description": "Convert unlimited text to speech with txt2speech.org. Upload TXT files, paste text, or convert EPUB to audio using OpenAI's advanced TTS technology.",
-          "applicationCategory": "Utility",
-          "operatingSystem": "Any",
-          "offers": {
-            "@type": "Offer",
-            "price": "0"
-          },
-          "author": {
-            "@type": "Person",
-            "name": "Myra Krusemark"
-          }
-        }
-    </script>
-
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .tab-transition {
+      transition: all 0.2s ease-in-out;
+    }
+  </style>
 </head>
-
-<body>
-    <div class="container" style="margin-bottom:100px">
-        <h1>txt2speech.org - Unlimited TTS Convertor</h1>
-        <div id="hours-counter">0 words converted!</div>
-
-        <script>
-            const counterElement = document.getElementById('hours-counter');
-            let count = Math.floor(Math.random() * 80000000) + 20000000; // Generate a random starting number between 20 million and 99 million
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+  <div class="max-w-screen-lg mx-auto p-4 font-sans">
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Text to Speech</h1>
+      <p class="text-gray-500 mt-2">Convert your text to natural-sounding speech</p>
+    </div>
+    
+    <div class="max-w-xl mx-auto rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <!-- Main container -->
+      <div class="relative">
+        <!-- Empty state with buttons -->
+        <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center gap-6 p-6 bg-gray-50 dark:bg-gray-800 z-10">
+          <div class="text-center mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Start with Text</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">Choose one of the options below to begin</p>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
+            <button id="paste-btn" class="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-colors shadow-md hover:shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+              </svg>
+              Paste
+            </button>
+            
+            <button id="upload-btn" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-colors shadow-md hover:shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+              Upload
+            </button>
+            
+            <input type="file" id="file-input" accept=".txt" class="hidden" />
+          </div>
+          
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            or click anywhere to type
+          </div>
+        </div>
         
-            function updateCounter() { //LMAO JK
-              count += Math.floor(Math.random() * 500); // Increase the count by a random amount between 0 and 500
-              counterElement.textContent = formatNumber(count) + ' words converted!';
-            }
-        
-            function formatNumber(num) {
-              return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); // Format the number with commas
-            }
-        
-            setInterval(updateCounter, 100); // Update the counter every 100 milliseconds
-          </script>
-        <p>txt2speech.org is a free, unlimited text-to-speech conversion tool that allows you to easily convert text files, pasted text, or EPUB ebooks into spoken audio using advanced TTS technology. To get started, simply:</p>
-
-        <ol>
-            <li>Select your preferred TTS engine (Piper Local, OpenAI, or Nabu Casa) and configure the required settings.</li>
-            <li>Load your text by uploading a file, pasting text, or converting an eBook, then click "Convert to Speech".</li>
-        </ol>
-
-        <p>Once the conversion is complete, you can download the generated audio file. Ensure you have the rights to convert any text you use and review the <a href="#disclaimer">Disclaimer</a>, <a href="#terms">Terms of Use</a>, and <a href="#data-policy">Data Handling Policy</a> before using this service.</p>
-        <h2>Step 1: Select a TTS engine</h2>
-        <div id="tts-engine-tabs" class="tabs">
-            <button class="tab-button active" data-tab="piper">Piper Local <span class="badge">RECOMMENDED</span></button>
-            <button class="tab-button" data-tab="openai">OpenAI</button>
-            <button class="tab-button" data-tab="nabu-casa">Nabu Casa</button>
+        <!-- Textarea -->
+        <textarea id="text-input" class="w-full p-6 text-gray-700 dark:text-gray-200 focus:outline-none dark:bg-gray-800 h-64 resize-none" placeholder="Type or paste your text here..."></textarea>
+      </div>
+      
+      <!-- Progress Bar -->
+      <div id="progress-container">
+        <div class="px-4 py-2">
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 relative">
+            <div id="processing" class="bg-blue-600 h-2 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 0%"></div>
+            <div id="completed" class="bg-green-500 h-2 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between mt-1">
+            <span id="conversion-label" class="text-sm text-gray-500 dark:text-gray-400"></span>
+            <span id="conversion-status" class="text-sm text-gray-500 dark:text-gray-400">--</span>
+          </div>
         </div>
-        <div id="tts-tab-content" class="tab-content">
-            <div id="openai" class="tab active">
-                <div class="form-group">
-                    <label for="openai-api-key">OpenAI API Key</label>
-                    <input type="text" id="openai-api-key" placeholder="Enter your API key" value="">
-                </div>
-                <div class="form-group">
-                    <label for="openai-voice-select">Voice</label>
-                    <select id="openai-voice-select">
-                        <option value="nova">Nova</option>
-                        <option value="alloy">Alloy</option>
-                        <option value="echo">Echo</option>
-                        <option value="fable">Fable</option>
-                        <option value="onyx">Onyx</option>
-                        <option value="shimmer">Shimmer</option>
-                    </select>
-                    <input type="checkbox" id="hd-audio">
-                    <label for="hd-audio" style="margin:0">HD</label>
-                </div>
-            </div>
-            <div id="nabu-casa" class="tab">
-                <p>If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.</p>
-                <div class="form-group">
-                    <label for="nabu-casa-server">Server Address</label>
-                    <input type="text" id="nabu-casa-server" placeholder="Enter Nabu Casa server address">
-                </div>
-                <div class="form-group">
-                    <label for="nabu-casa-bearer">Bearer Token</label>
-                    <input type="text" id="nabu-casa-bearer" placeholder="Enter bearer token">
-                </div>
-                <div class="form-group">
-                    <label for="nabu-casa-voice-select">Voice</label>
-                    <select id="nabu-casa-voice-select">
-                        <option>Please wait...</option>
-                    </select>
-                </div>
-            </div>
-            <div id="piper" class="tab">
-                <p>Thank you, <a target="_blank" href="https://wide.video">Wide Video</a>, for the Web Assembly Piper TTS! (<a target="_blank" href="https://piper.wide.video/">https://piper.wide.video/</a>)</p>
-                <p>Some voices may cause errors. If a voice is causing you trouble, please submit an issue on <a target="_blank" href="https://github.com/myrakrusemark/text2speech.org">GitHub</a>.</p>
-                <p>8GB RAM required. 16GB RAM recommended.</p>
-                <label for="piper-voice-select">Select Voice:</label>
-                <select id="piper-voice-select">
-                    <option>Please wait...</option>
-                </select>
-            </div>
-        </div>
-        <h2>Step 2: Load Text</h2>
-        <div id="text-type-tabs" class="tabs">
-            <button class="tab-button active" data-tab="upload-txt">Text File</button>
-            <button class="tab-button" data-tab="paste-text">Paste Text</button>
-            <button class="tab-button" data-tab="upload-ebook">eBook</button>
-        </div>
-        <div id="text-type-tab-content" class="tab-content">
-            <div id="upload-txt" class="tab active">
-                <div class="form-group">
-                    <input type="file" id="file-input" accept=".txt">
-                </div>
-            </div>
-            <div id="paste-text" class="tab">
-                <div class="form-group">
-                    <textarea id="text-input" rows="10"></textarea>
-                </div>
-            </div>
-            <div id="upload-ebook" class="tab">
-                <p>
-                    I love to use <a target="_blank" href="https://convertio.co/epub-txt/">Convertio - ePub to TXT Convertor</a>.
-                </p>
-            </div>
-        </div>
-        <button id="convert-button">Convert to Speech <span id="estimated-cost"></span></button>
-        <button id="cancel-button" class="secondary" style="display:none;">Cancel</button>
-        <div class="progress-container">
-            <label for="processing" id="file-name"> </label>
-            <div class="progress-wrapper">
-                <progress id="processing" class="processing classlist" value="0" max="100"></progress>
-                <progress id="completed" class="completed" value="0" max="100"></progress>
-                <div id="conversion-status" class="conversion-status">0/0 (0%)</div>
-            </div>            
-        </div>
-        <ul id="results">
-        </ul>
-        <div class="footer">
-            Another cool project by <a target="_blank" href="https://myrakrusemark.com">Myra Krusemark</a>! (C)2024 | <a target="_blank" href="https://github.com/myrakrusemark">GitHub</a>
-        </div>
+      </div>
+      
+      <!-- Controls -->
+      <div class="border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center p-4">
+          <!-- Main controls -->
+          <div class="flex-1 flex gap-3">
+            <button id="convert-button" class="flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+              </svg>
+              Convert
+            </button>
+            
 
             
-    </div>
-
-
-    <div id="footer">
-        <div id="disclaimer" class="container">
-            <h2>Disclaimer</h2>
-            <p>Please read the following disclaimer carefully before using this Text to Speech Converter:</p>
-            <ul>
-                <li><strong>Use of Text:</strong> It is the responsibility of the user to ensure they have the appropriate rights to convert any text files uploaded using this tool. This service should not be used to infringe on the copyright of any texts. Users must ensure they have the proper authorization or license to use the text.</li>
-                <li><strong>API Key:</strong> Users must use their own OpenAI API key. When you enter your API key, it is saved to a local cookie in your browser. The key is only ever stored locally on your device. To remove the saved API key, simply clear the text from the API key input field. By entering your API key, you assume all responsibility for the usage charges and adherence to OpenAI's usage policies and terms.</li>                <li><strong>Accuracy:</strong> While we strive to provide a high-quality service, we do not guarantee that the text-to-speech conversion will be error-free or uninterrupted.</li>
-                <li><strong>Liability:</strong> We shall not be held liable for any direct, indirect, incidental, consequential, or punitive damages arising out of the use of this tool. This includes, but is not limited to, damages for loss of profits, goodwill, use, data, or other intangible losses.</li>
-                <li><strong>No Warranties:</strong> This service is provided "as is" without any representations or warranties, express or implied. We make no representations or warranties in relation to this website or the information and materials provided on this website.</li>
-            </ul>
-            <p>By using this Text to Speech Converter, you accept this disclaimer in full. If you disagree with any part of this disclaimer, do not use our website.</p>
-        </div>
-        <div id="terms" class="container">
-            <h2>Terms of Use</h2>
-            <p>By using this Text to Speech Converter, you agree to abide by the following terms of use:</p>
-            <ul>
-                <li><strong>API Key Usage:</strong> Users must provide their own OpenAI API key to use this service. You are responsible for all activities that occur under your API key and must adhere to the OpenAI's terms and conditions.</li>
-                <li><strong>Content Responsibility:</strong> You are solely responsible for the text data you upload and convert using this tool. Ensure you have the necessary rights to use and convert the text. Do not use this service for unauthorized reproduction of copyrighted material.</li>
-                <li><strong>Permissible Use:</strong> The service must not be used for any unlawful or unauthorized purposes. Compliance with applicable laws and regulations is mandatory.</li>
-                <li><strong>No Redistribution:</strong> The outputs from this service, including any generated audio files, must not be sold, redistributed, or used in a commercial product without proper authorization.</li>
-                <li><strong>Service Availability:</strong> We do not guarantee uninterrupted access to this service. The availability may be affected by technical issues, maintenance, or updates.</li>
-                <li><strong>Modifications to Terms:</strong> We reserve the right to modify these terms at any time. Your continued use of the service after any such changes constitutes your acceptance of the new terms.</li>
-            </ul>
-            <p>If you do not agree with any of these terms, please do not use this Text to Speech Converter.</p>
-        </div>
-        <div id="data-policy" class="container">
-            <h2>Data Handling Policy</h2>
-            <p>This section outlines how we handle the data you provide while using this Text to Speech Converter:</p>
-            <ul>
-                <li><strong>Local Processing:</strong> All text-to-speech processing is performed locally in your browser. No text files or data are uploaded to a server at any point.</li>
-                <li><strong>Data Privacy:</strong> Since the processing is local, your data remains on your device, and we do not have access to it. You are responsible for maintaining the confidentiality of your data while using this service.</li>
-                <li><strong>No Data Storage:</strong> We do not store any personal data or text files that you use with this tool. Once the browser session is closed, any uploaded files and generated speech data are no longer accessible.</li>
-                <li><strong>API Key Security:</strong> Your OpenAI API key is not stored by us. You must enter it each time you use the service, and it is your responsibility to keep it secure.</li>
-                <li><strong>No Data Sharing:</strong> We do not share, sell, or otherwise disclose your data to third parties. The tool is designed to ensure that your data never leaves your device, except for the interaction with OpenAI's API directly handled by your browser.</li>
-            </ul>
-            <p>By using this Text to Speech Converter, you acknowledge and agree to our data handling practices as described above. If you have any concerns about how your data is handled, please refrain from using this service.</p>
-        </div>
-        <div class="container">
-            <h2>OpenAI API Compliance</h2>
-            <p>To ensure responsible and lawful use of the OpenAI API with our Text to Speech Converter, please adhere to the following guidelines:</p>
-            <ul>
-                <li><strong>API Key Security:</strong> Users must enter their own OpenAI API keys and are responsible for securing and managing access to their keys. It is crucial not to share your API key with others and to keep it confidential to prevent unauthorized use.</li>
-                <li><strong>Adhere to OpenAI's Terms:</strong> Users must comply with all terms and conditions set forth by OpenAI. This includes avoiding the processing of prohibited content and adhering to data privacy standards and usage limits.</li>
-                <li><strong>Data Privacy Compliance:</strong> Ensure compliance with relevant data protection regulations such as GDPR or CCPA. Be aware that data processed through OpenAI's API must be handled in accordance with these laws.</li>
-                <li><strong>Rate Limiting and Usage Limits:</strong> Be mindful of the rate limits imposed by OpenAI to prevent service disruptions and additional charges. Users should monitor their API usage to stay within the provided limits.</li>
-                <li><strong>Prohibited Content:</strong> Do not use the API for creating or distributing content that is illegal, offensive, or otherwise violates OpenAI's content policies.</li>
-                <li><strong>Updates and Changes:</strong> OpenAI may update their terms or policies. Users are responsible for staying informed about these changes and ensuring ongoing compliance.</li>
-            </ul>
-            <p>By using this service, you agree to follow these guidelines and acknowledge that failure to comply with these terms may result in suspension or termination of your access to OpenAI services. If you have any questions about these requirements, please refer to the official OpenAI documentation and terms of service.</p>
-        </div>
-        <div class="container">
-        <h2>Nabu Casa API Compliance</h2>
-        <p>To ensure responsible and lawful use of the Nabu Casa API, please adhere to the following guidelines:</p>
-        <ul>
-            <li><strong>API Key Security:</strong> Users must securely store and manage their Nabu Casa API keys. Do not share your API key with others. You are responsible for all activity that occurs under your API key. Notify Nabu Casa immediately if you suspect unauthorized use of your API key.</li>
-            <li><strong>Compliance with Terms:</strong> Use of the Nabu Casa API is subject to these Terms of Service as well as the Nabu Casa Privacy Policy. Ensure you have reviewed and agree to abide by all applicable terms when accessing the API.</li>
-            <li><strong>Acceptable Use:</strong> Only use the Nabu Casa API for lawful purposes that are permitted by these Terms. Do not use the API to violate the rights of Nabu Casa or any third party, including intellectual property, privacy, and publicity rights.</li>
-            <li><strong>Data Protection:</strong> When using the API to access or process personal data, ensure your usage complies with applicable data protection laws such as the GDPR and CCPA. Use appropriate safeguards to protect the confidentiality and security of any personal data.</li>
-            <li><strong>API Call Limits:</strong> Adhere to the documented rate limits and usage quotas for API calls to prevent service disruption. Do not make excessive or abusive calls to the API.</li>
-            <li><strong>Monitoring and Auditing:</strong> Nabu Casa reserves the right to monitor your API usage to ensure quality, improve the service, and verify compliance with these terms. We may limit, suspend or terminate API access if we reasonably believe there is a violation of these terms.</li>
-            <li><strong>Indemnification:</strong> You agree to indemnify, defend and hold harmless Nabu Casa and its affiliates from any claim, suit or action arising from your API usage or breach of these terms, including any liability or expense arising from claims, losses, damages, judgments, litigation costs and legal fees.</li>
-        </ul>
-        <p>By using the Nabu Casa API, you agree to abide by these API compliance terms in addition to all other provisions of the Terms of Service. Nabu Casa may update these terms at any time, so please check back periodically. Continued use of the API constitutes acceptance of any modifications.</p>
-        </div>
-        <div class="container">
-            <h2>Piper Licensing</h2>
-            <p>The Piper software is released under the MIT License:</p>
-            <pre>
-          MIT License
-          
-          Copyright (c) [year] [copyright holders]
-          
-          Permission is hereby granted, free of charge, to any person obtaining a copy
-          of this software and associated documentation files (the "Software"), to deal
-          in the Software without restriction, including without limitation the rights
-          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-          copies of the Software, and to permit persons to whom the Software is
-          furnished to do so, subject to the following conditions:
-          
-          The above copyright notice and this permission notice shall be included in all
-          copies or substantial portions of the Software.
-          
-          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-          SOFTWARE.
-            </pre>
-            <p>By using Piper, you agree to the terms of this license.</p>
-            <h3>Implications of MIT License</h3>
-            <ul>
-              <li><strong>Permission:</strong> The license grants permission to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the Piper software.</li>
-              <li><strong>Conditions:</strong> The license requires that the copyright notice and permission notice be included in all copies or substantial portions of the software.</li> 
-              <li><strong>Warranty:</strong> The software is provided "as is", without any warranties, express or implied. The authors or copyright holders are not liable for any claims, damages, or other liabilities arising from the use of Piper.</li>
-            </ul>
-            <p>Please note that while Piper itself is open-source under the MIT license, the usage of Piper with third-party APIs (such as OpenAI) is subject to the respective terms and policies of those services.</p>
+            <button id="cancel-button" class="hidden px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
+              </svg>
+              Stop
+            </button>
           </div>
+          
+          <!-- Settings toggle -->
+          <button id="settings-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Settings panel -->
+        <div id="settings-panel" class="border-t border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out overflow-hidden max-h-0">
+          <div class="p-4 space-y-6">
+            <!-- TTS Engine Tabs -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                TTS Engine
+              </label>
+              <div id="tts-engine-tabs" class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
+                <button data-tab="piper" data-extension=".wav" class="tab-button active flex-1 py-2 px-3 rounded-lg font-medium text-sm bg-blue-600 text-white">
+                  Piper Local <span class="ml-1 px-1.5 py-0.5 text-xs bg-green-500 rounded-full">RECOMMENDED</span>
+                </button>
+                <button data-tab="openai" data-extension=".mp3" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                  OpenAI
+                </button>
+                <button data-tab="nabu-casa" data-extension=".mp3" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                  Nabu Casa
+                </button>
+              </div>
+              
+              <!-- Piper Local Tab Content -->
+              <div id="piper" class="tab-content space-y-4 fade-in">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <p class="mb-2">
+                    Thank you, <a href="https://wide.video" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Wide Video</a>, for the Web Assembly Piper TTS! (<a href="https://piper.wide.video/" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">https://piper.wide.video/</a>)
+                  </p>
+                  <p class="mb-2">
+                    Some voices may cause errors. If a voice is causing you trouble, please submit an issue on <a href="https://github.com/myrakrusemark/text2speech.org" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a>.
+                  </p>
+                  <p class="mb-2">
+                    8GB RAM required. 16GB RAM recommended.
+                  </p>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="piper-voice-select">
+                    Select Voice:
+                  </label>
+                  <select id="piper-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>Please wait...</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- OpenAI Tab Content -->
+              <div id="openai" class="tab-content space-y-4 hidden">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-api-key">
+                    OpenAI API Key
+                  </label>
+                  <input type="text" id="openai-api-key" placeholder="Enter your API key" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-voice-select">
+                    Voice
+                  </label>
+                  <div class="flex items-center">
+                    <select id="openai-voice-select" class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="nova">Nova</option>
+                      <option value="alloy">Alloy</option>
+                      <option value="echo">Echo</option>
+                      <option value="fable">Fable</option>
+                      <option value="onyx">Onyx</option>
+                      <option value="shimmer">Shimmer</option>
+                    </select>
+                    <div class="ml-3 flex items-center">
+                      <input type="checkbox" id="hd-audio" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                      <label for="hd-audio" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        HD
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Nabu Casa Tab Content -->
+              <div id="nabu-casa" class="tab-content space-y-4 hidden">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <p>
+                    If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.
+                  </p>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-server">
+                    Server Address
+                  </label>
+                  <input type="text" id="nabu-casa-server" placeholder="Enter Nabu Casa server address" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-bearer">
+                    Bearer Token
+                  </label>
+                  <input type="text" id="nabu-casa-bearer" placeholder="Enter bearer token" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-voice-select">
+                    Voice
+                  </label>
+                  <select id="nabu-casa-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>Please wait...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    
-    <script type="module" src="script.js"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const tabSets = document.querySelectorAll('.tabs');
 
-        tabSets.forEach(function(tabSet) {
-            const tabButtons = tabSet.querySelectorAll('.tab-button');
-            const tabContent = tabSet.nextElementSibling;
+    <!-- Output Files Card -->
+    <div class="max-w-xl mx-auto mt-6 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Output File</h2>
+      </div>
+      <div id="results" class="divide-y divide-gray-200 dark:divide-gray-700">
 
-            tabButtons.forEach(function(button) {
-                button.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
-                    
-                    // Remove active class from all buttons in this tab set
-                    tabButtons.forEach(function(btn) {
-                        btn.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                });
+      </div>
+    </div>
+  </div>
 
-                // Use MutationObserver to watch for changes in the button's class list
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                            const tabId = button.getAttribute('data-tab');
-                            const correspondingTab = tabContent.querySelector(`#${tabId}`);
-                            
-                            if (button.classList.contains('active')) {
-                                // Remove active class from all content tabs in this tab set
-                                tabContent.querySelectorAll('.tab').forEach(function(tab) {
-                                    tab.classList.remove('active');
-                                });
-                                
-                                // Add active class to corresponding content tab
-                                correspondingTab.classList.add('active');
-                            }
-                        }
-                    });
-                });
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Elements
+      const textInput = document.getElementById('text-input');
+      const emptyState = document.getElementById('empty-state');
+      const pasteBtn = document.getElementById('paste-btn');
+      const uploadBtn = document.getElementById('upload-btn');
+      const fileInput = document.getElementById('file-input');
+      const settingsToggle = document.getElementById('settings-toggle');
+      const settingsPanel = document.getElementById('settings-panel');
+      const progressBar = document.getElementById('progress-bar');
+      const progressBar2 = document.getElementById('progress-bar-2');
+      
+      let isSettingsOpen = false;
 
-                observer.observe(button, { attributes: true, attributeFilter: ['class'] });
-            });
+      // Handle text input changes
+      textInput.addEventListener('input', () => {
+        if (textInput.value.length > 0) {
+          emptyState.style.display = 'none';
+        } else {
+          emptyState.style.display = 'flex';
+        }
+      });
+      
+      // Handle textarea focus
+      textInput.addEventListener('focus', () => {
+        emptyState.style.display = 'none';
+      });
+      
+      // Handle textarea blur
+      textInput.addEventListener('blur', () => {
+        if (textInput.value.length === 0) {
+          emptyState.style.display = 'flex';
+        }
+      });
+      
+      // Handle paste from clipboard
+      pasteBtn.addEventListener('click', async () => {
+        try {
+          const clipboardText = await navigator.clipboard.readText();
+          textInput.value = clipboardText;
+          emptyState.style.display = 'none';
+        } catch (err) {
+          console.error('Failed to read clipboard contents: ', err);
+          alert('Unable to access clipboard. Please check your browser permissions.');
+        }
+      });
+      
+      // Handle file upload button
+      uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      // Handle file selection
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        
+        if (file && file.type === 'text/plain') {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            textInput.value = event.target.result;
+            emptyState.style.display = 'none';
+          };
+          reader.readAsText(file);
+        } else if (file) {
+          alert('Please upload a valid text file (.txt)');
+        }
+      });
+      
+      // Handle click on empty state (to focus textarea)
+      emptyState.addEventListener('click', (e) => {
+        if (e.target === emptyState) {
+          textInput.focus();
+        }
+      });
+      
+      // Toggle settings panel
+      function toggleSettings() {
+        isSettingsOpen = !isSettingsOpen;
+        
+        if (isSettingsOpen) {
+          settingsPanel.style.maxHeight = '1000px';
+          settingsToggle.classList.add('bg-gray-200', 'dark:bg-gray-700');
+        } else {
+          settingsPanel.style.maxHeight = '0';
+          settingsToggle.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+        }
+      }
+      
+      // Event Listeners
+      settingsToggle.addEventListener('click', toggleSettings);
+      
+      // Function to update progress bars
+      function updateProgressBars(processingValue, completedValue) {
+        progressBar.style.width = `${processingValue}%`;
+        progressBar2.style.width = `${completedValue}%`;
+      }
+
+      // Create a MutationObserver to watch for changes to the progress bars
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+            const processingBar = document.getElementById('processing');
+            const completedBar = document.getElementById('completed');
+            if (processingBar && completedBar) {
+              updateProgressBars(processingBar.value, completedBar.value);
+            }
+          }
         });
+      });
+
+      // Start observing the progress bars
+      const processingBar = document.getElementById('processing');
+      const completedBar = document.getElementById('completed');
+      if (processingBar) observer.observe(processingBar, { attributes: true });
+      if (completedBar) observer.observe(completedBar, { attributes: true });
     });
-    </script>
+  </script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

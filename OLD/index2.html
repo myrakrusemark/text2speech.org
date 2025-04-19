@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900">
+    <div class="max-w-screen-lg mx-auto p-4 font-sans">
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Text to Speech</h1>
+            <p class="text-gray-500 mt-2">Convert your text to natural-sounding speech</p>
+        </div>
+
+        <div class="max-w-xl mx-auto rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div class="relative">
+                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center gap-6 p-6 bg-gray-50 dark:bg-gray-800 z-10">
+                    <div class="text-center mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                        </svg>
+                        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Start with Text</h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">Choose one of the options below to begin</p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
+                        <button id="pasteBtn" class="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-colors shadow-md hover:shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2H6z" />
+                            </svg>
+                            Paste
+                        </button>
+
+                        <button id="uploadBtn" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-colors shadow-md hover:shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Upload
+                        </button>
+                    </div>
+
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        or click anywhere to type
+                    </div>
+                </div>
+
+                <textarea id="textInput" class="w-full p-6 text-gray-700 dark:text-gray-200 focus:outline-none dark:bg-gray-800 h-64 resize-none" placeholder="Type or paste your text here..."></textarea>
+                <input type="file" id="fileInput" accept=".txt" class="hidden">
+            </div>
+
+            <!-- Progress Bar Section -->
+            <div class="px-6 py-3 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Processing Progress</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">13 chunks of 20 - 65%</span>
+                </div>
+                <div class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <!-- Pending Progress -->
+                    <div class="absolute left-0 top-0 h-full bg-blue-400 dark:bg-blue-500 rounded-full" style="width: 75%"></div>
+                    <!-- Completed Progress -->
+                    <div class="absolute left-0 top-0 h-full bg-blue-600 rounded-full" style="width: 65%"></div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center p-4">
+                    <div class="flex-1 flex gap-3">
+                        <button id="speakBtn" class="flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all">
+                            <span>Speak</span>
+                        </button>
+                        <button id="pauseBtn" class="flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-700 shadow-md hover:shadow-lg transition-all hidden">
+                            <span>Pause</span>
+                        </button>
+                        <button id="resumeBtn" class="flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all hidden">
+                            <span>Resume</span>
+                        </button>
+                        <button id="stopBtn" class="flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transition-all hidden">
+                            <span>Stop</span>
+                        </button>
+                    </div>
+                    </select>
+                    <button id="settingsBtn" class="ml-2 p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div id="settingsPanel" class="hidden border-t border-gray-200 dark:border-gray-700 p-4">
+                <div class="space-y-6">
+                    <!-- TTS Engine Tabs -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            TTS Engine
+                        </label>
+                        <div class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
+                            <button id="piperTab"
+                                class="flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors bg-blue-600 text-white"
+                            >
+                                Piper Local <span class="ml-1 px-1.5 py-0.5 text-xs bg-green-500 rounded-full">RECOMMENDED</span>
+                            </button>
+                            <button id="openaiTab"
+                                class="flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                                OpenAI
+                            </button>
+                            <button id="nabuCasaTab"
+                                class="flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                                Nabu Casa
+                            </button>
+                        </div>
+
+                        <!-- Piper Local Tab Content -->
+                        <div id="piperContent" class="space-y-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                <p class="mb-2">
+                                    Thank you, <a href="https://wide.video" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Wide Video</a>, for the Web Assembly Piper TTS! (<a href="https://piper.wide.video/" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">https://piper.wide.video/</a>)
+                                </p>
+                                <p class="mb-2">
+                                    Some voices may cause errors. If a voice is causing you trouble, please submit an issue on <a href="https://github.com/myrakrusemark/text2speech.org" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a>.
+                                </p>
+                                <p class="mb-2">
+                                    8GB RAM required. 16GB RAM recommended.
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="piper-voice-select">
+                                    Select Voice:
+                                </label>
+                                <select id="piper-voice-select"
+                                    class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option>Please wait...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- OpenAI Tab Content -->
+                        <div id="openaiContent" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-api-key">
+                                    OpenAI API Key
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="openai-api-key" placeholder="Enter your API key"
+                                        class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                    <button class="clear-btn px-3 py-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors" data-cookie="openai_key" data-input="openai-api-key">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-voice-select">
+                                    Voice
+                                </label>
+                                <div class="flex items-center">
+                                    <select id="openai-voice-select"
+                                        class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="nova">Nova</option>
+                                        <option value="alloy">Alloy</option>
+                                        <option value="echo">Echo</option>
+                                        <option value="fable">Fable</option>
+                                        <option value="onyx">Onyx</option>
+                                        <option value="shimmer">Shimmer</option>
+                                    </select>
+                                    <div class="ml-3 flex items-center">
+                                        <input type="checkbox" id="hd-audio"
+                                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        >
+                                        <label for="hd-audio" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                            HD
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nabu Casa Tab Content -->
+                        <div id="nabuCasaContent" class="space-y-4 hidden">
+                            <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                <p>
+                                    If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-server">
+                                    Server Address
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="nabu-casa-server" placeholder="Enter Nabu Casa server address"
+                                        class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                    <button class="clear-btn px-3 py-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors" data-cookie="nabu_server" data-input="nabu-casa-server">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-bearer">
+                                    Bearer Token
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="nabu-casa-bearer" placeholder="Enter bearer token"
+                                        class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                    <button class="clear-btn px-3 py-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors" data-cookie="nabu_token" data-input="nabu-casa-bearer">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-voice-select">
+                                    Voice
+                                </label>
+                                <select id="nabu-casa-voice-select"
+                                    class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option>Please wait...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated Files Card -->
+        <div class="max-w-xl mx-auto mt-6 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Generated Files</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Your recent text-to-speech conversions</p>
+            </div>
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Sample File 1 -->
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.828 2.828" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Welcome Message.mp3</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Generated 2 minutes ago</p>
+                        </div>
+                    </div>
+                    <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                    </button>
+                </div>
+
+                <!-- Sample File 2 -->
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.828 2.828" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Product Description.mp3</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Generated 15 minutes ago</p>
+                        </div>
+                    </div>
+                    <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                    </button>
+                </div>
+
+                <!-- Sample File 3 -->
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.828 2.828" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Meeting Notes.mp3</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Generated 1 hour ago</p>
+                        </div>
+                    </div>
+                    <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div class="p-4 text-center text-gray-500 dark:text-gray-400">
+                    <p>No files generated yet. Convert some text to speech to see your files here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let voices = [];
+        let currentUtterance = null;
+        let isSpeaking = false;
+        let isPaused = false;
+        let isSettingsOpen = false;
+        let activeTab = 'piper';
+
+        // DOM Elements
+        const textInput = document.getElementById('textInput');
+        const speakBtn = document.getElementById('speakBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const emptyState = document.getElementById('emptyState');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const piperTab = document.getElementById('piperTab');
+        const openaiTab = document.getElementById('openaiTab');
+        const nabuCasaTab = document.getElementById('nabuCasaTab');
+        const piperContent = document.getElementById('piperContent');
+        const openaiContent = document.getElementById('openaiContent');
+        const nabuCasaContent = document.getElementById('nabuCasaContent');
+
+        // Cookie management functions
+        function setCookie(name, value, days = 365) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Save settings to cookies
+        function saveSettings() {
+            // Save active tab
+            setCookie('activeTab', activeTab);
+
+            // Save OpenAI settings
+            const openaiKey = document.getElementById('openai-api-key').value;
+            const openaiVoice = document.getElementById('openai-voice-select').value;
+            const openaiHD = document.getElementById('hd-audio').checked;
+            setCookie('openai_key', openaiKey);
+            setCookie('openai_voice', openaiVoice);
+            setCookie('openai_hd', openaiHD);
+
+            // Save Nabu Casa settings
+            const nabuServer = document.getElementById('nabu-casa-server').value;
+            const nabuToken = document.getElementById('nabu-casa-bearer').value;
+            const nabuVoice = document.getElementById('nabu-casa-voice-select').value;
+            setCookie('nabu_server', nabuServer);
+            setCookie('nabu_token', nabuToken);
+            setCookie('nabu_voice', nabuVoice);
+
+            // Save Piper settings
+            const piperVoice = document.getElementById('piper-voice-select').value;
+            setCookie('piper_voice', piperVoice);
+        }
+
+        // Load settings from cookies
+        function loadSettings() {
+            // Load active tab
+            const savedTab = getCookie('activeTab');
+            if (savedTab) {
+                activeTab = savedTab;
+                switchTab(savedTab);
+            }
+
+            // Load OpenAI settings
+            const openaiKey = getCookie('openai_key');
+            const openaiVoice = getCookie('openai_voice');
+            const openaiHD = getCookie('openai_hd');
+            if (openaiKey) document.getElementById('openai-api-key').value = openaiKey;
+            if (openaiVoice) document.getElementById('openai-voice-select').value = openaiVoice;
+            if (openaiHD) document.getElementById('hd-audio').checked = openaiHD === 'true';
+
+            // Load Nabu Casa settings
+            const nabuServer = getCookie('nabu_server');
+            const nabuToken = getCookie('nabu_token');
+            const nabuVoice = getCookie('nabu_voice');
+            if (nabuServer) document.getElementById('nabu-casa-server').value = nabuServer;
+            if (nabuToken) document.getElementById('nabu-casa-bearer').value = nabuToken;
+            if (nabuVoice) document.getElementById('nabu-casa-voice-select').value = nabuVoice;
+
+            // Load Piper settings
+            const piperVoice = getCookie('piper_voice');
+            if (piperVoice) document.getElementById('piper-voice-select').value = piperVoice;
+        }
+
+        // Add input event listeners to save settings
+        document.getElementById('openai-api-key').addEventListener('input', saveSettings);
+        document.getElementById('openai-voice-select').addEventListener('change', saveSettings);
+        document.getElementById('hd-audio').addEventListener('change', saveSettings);
+        document.getElementById('nabu-casa-server').addEventListener('input', saveSettings);
+        document.getElementById('nabu-casa-bearer').addEventListener('input', saveSettings);
+        document.getElementById('nabu-casa-voice-select').addEventListener('change', saveSettings);
+        document.getElementById('piper-voice-select').addEventListener('change', saveSettings);
+
+        // Event Listeners
+        textInput.addEventListener('input', () => {
+            if (textInput.value.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        });
+
+        // Add click handler for empty state container
+        emptyState.addEventListener('click', (e) => {
+            // Only focus if clicking the container itself, not its child buttons
+            if (e.target === emptyState || e.target.closest('#emptyState') && !e.target.closest('button')) {
+                textInput.focus();
+            }
+        });
+
+        textInput.addEventListener('focus', () => {
+            emptyState.classList.add('hidden');
+        });
+
+        textInput.addEventListener('blur', () => {
+            // Show empty state only if there's no text
+            if (textInput.value.length === 0) {
+                emptyState.classList.remove('hidden');
+            }
+        });
+
+        // Handle clicks outside the card
+        document.addEventListener('click', (e) => {
+            const card = document.querySelector('.max-w-xl');
+            // If clicking outside the card and textarea is empty
+            if (!card.contains(e.target) && textInput.value.length === 0) {
+                emptyState.classList.remove('hidden');
+            }
+        });
+
+        speakBtn.addEventListener('click', () => {
+            if (!isSpeaking) {
+                speak();
+            }
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            if (isSpeaking && !isPaused) {
+                window.speechSynthesis.pause();
+                isPaused = true;
+                pauseBtn.classList.add('hidden');
+                resumeBtn.classList.remove('hidden');
+            }
+        });
+
+        resumeBtn.addEventListener('click', () => {
+            if (isSpeaking && isPaused) {
+                window.speechSynthesis.resume();
+                isPaused = false;
+                resumeBtn.classList.add('hidden');
+                pauseBtn.classList.remove('hidden');
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                isPaused = false;
+                updateButtons();
+            }
+        });
+
+        pasteBtn.addEventListener('click', async () => {
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                textInput.value = clipboardText;
+                emptyState.classList.add('hidden');
+            } catch (err) {
+                console.error('Failed to read clipboard contents: ', err);
+                alert('Unable to access clipboard. Please check your browser permissions.');
+            }
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    textInput.value = event.target.result;
+                    emptyState.classList.add('hidden');
+                };
+                reader.readAsText(file);
+            } else if (file) {
+                alert('Please upload a valid text file (.txt)');
+            }
+        });
+
+        // Settings controls
+        settingsBtn.addEventListener('click', () => {
+            isSettingsOpen = !isSettingsOpen;
+            settingsPanel.classList.toggle('hidden');
+        });
+
+        // Modify switchTab function to save the active tab
+        function switchTab(tabName) {
+            // Update active tab
+            activeTab = tabName;
+            setCookie('activeTab', activeTab); // Save tab selection
+            
+            // Rest of the existing switchTab code...
+            [piperTab, openaiTab, nabuCasaTab].forEach(tab => {
+                tab.classList.remove('bg-blue-600', 'text-white');
+                tab.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+            });
+            
+            [piperContent, openaiContent, nabuCasaContent].forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            switch(tabName) {
+                case 'piper':
+                    piperTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    piperTab.classList.add('bg-blue-600', 'text-white');
+                    piperContent.classList.remove('hidden');
+                    break;
+                case 'openai':
+                    openaiTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    openaiTab.classList.add('bg-blue-600', 'text-white');
+                    openaiContent.classList.remove('hidden');
+                    break;
+                case 'nabu-casa':
+                    nabuCasaTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    nabuCasaTab.classList.add('bg-blue-600', 'text-white');
+                    nabuCasaContent.classList.remove('hidden');
+                    break;
+            }
+        }
+
+        // Load settings when the page loads
+        document.addEventListener('DOMContentLoaded', loadSettings);
+
+        // Update speak function to use the active engine
+        function speak() {
+            if (!textInput.value) return;
+
+            switch(activeTab) {
+                case 'piper':
+                    // Implement Piper TTS logic here
+                    break;
+                case 'openai':
+                    // Implement OpenAI TTS logic here
+                    break;
+                case 'nabu-casa':
+                    // Implement Nabu Casa TTS logic here
+                    break;
+            }
+        }
+
+        function updateButtons() {
+            if (isSpeaking) {
+                speakBtn.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-400', 'cursor-default');
+                speakBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                pauseBtn.classList.remove('hidden');
+                stopBtn.classList.remove('hidden');
+            } else {
+                speakBtn.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-400', 'cursor-default');
+                speakBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                pauseBtn.classList.add('hidden');
+                resumeBtn.classList.add('hidden');
+                stopBtn.classList.add('hidden');
+            }
+        }
+
+        // Initialize empty state visibility
+        if (textInput.value.length === 0) {
+            emptyState.classList.remove('hidden');
+        } else {
+            emptyState.classList.add('hidden');
+        }
+
+        // Add tab switching functionality
+        function switchTab(tabName) {
+            // Update active tab
+            activeTab = tabName;
+            
+            // Update tab buttons
+            [piperTab, openaiTab, nabuCasaTab].forEach(tab => {
+                tab.classList.remove('bg-blue-600', 'text-white');
+                tab.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+            });
+            
+            // Hide all content
+            [piperContent, openaiContent, nabuCasaContent].forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Show active content and update active tab
+            switch(tabName) {
+                case 'piper':
+                    piperTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    piperTab.classList.add('bg-blue-600', 'text-white');
+                    piperContent.classList.remove('hidden');
+                    break;
+                case 'openai':
+                    openaiTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    openaiTab.classList.add('bg-blue-600', 'text-white');
+                    openaiContent.classList.remove('hidden');
+                    break;
+                case 'nabu-casa':
+                    nabuCasaTab.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                    nabuCasaTab.classList.add('bg-blue-600', 'text-white');
+                    nabuCasaContent.classList.remove('hidden');
+                    break;
+            }
+        }
+
+        // Add tab click handlers
+        piperTab.addEventListener('click', () => switchTab('piper'));
+        openaiTab.addEventListener('click', () => switchTab('openai'));
+        nabuCasaTab.addEventListener('click', () => switchTab('nabu-casa'));
+
+        // Add clear button functionality
+        function clearCookie(name) {
+            document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        }
+
+        // Add click handlers for clear buttons
+        document.querySelectorAll('.clear-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cookieName = btn.dataset.cookie;
+                const inputId = btn.dataset.input;
+                const input = document.getElementById(inputId);
+                
+                // Clear the input value
+                if (input) {
+                    input.value = '';
+                }
+                
+                // Clear the cookie
+                clearCookie(cookieName);
+            });
+        });
+    </script>
+</body>
+</html> 
