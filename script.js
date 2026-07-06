@@ -177,6 +177,18 @@ async function initializeStoredData() {
     // Populate Kokoro voice select (restores the saved voice from its cookie)
     populateKokoroVoiceSelect(document.getElementById('kokoro-voice-select'));
 
+    // Text shared via the bookmarklet (#text=... fragment) takes precedence
+    // over any stored session: fill the textarea and convert immediately.
+    const sharedText = consumeSharedText();
+    if (sharedText) {
+        await clearSession();
+        const ta = document.getElementById('text-input');
+        ta.value = sharedText;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        convertTextToSpeech();
+        return;
+    }
+
     if (allItemsPresent) {
         text = await getDataFromIndexedDB('text');
         chunks = splitTextIntoChunks(text);
@@ -254,8 +266,29 @@ document.getElementById('discard-btn').addEventListener('click', () => {
     clearSession();
 });
 
+// Read and clear text handed over in the URL fragment by the bookmarklet.
+// The fragment is replaced immediately so reloads don't re-trigger the
+// conversion (and the possibly huge URL doesn't stick around).
+function consumeSharedText() {
+    if (!location.hash.startsWith('#text=')) return null;
+    let shared = null;
+    try {
+        shared = decodeURIComponent(location.hash.slice(6));
+    } catch (e) {
+        console.error('Could not decode shared text:', e);
+    }
+    history.replaceState(null, '', location.pathname + location.search);
+    return shared && shared.trim() ? shared : null;
+}
+
 // Call initializeStoredData when the window loads
 window.addEventListener('load', initializeStoredData);
+
+// A #text= fragment landing in an already-open tab (no document load)
+// still needs handling — reload so the normal startup path picks it up.
+window.addEventListener('hashchange', () => {
+    if (location.hash.startsWith('#text=')) location.reload();
+});
 
 // Cancel button
 function handleCancelButtonClick() {

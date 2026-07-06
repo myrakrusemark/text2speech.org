@@ -188,6 +188,19 @@
                 <option>Please wait...</option>
               </select>
             </div>
+
+            <div class="pt-3 border-t border-gray-200 dark:border-gray-600">
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Read from anywhere</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Drag this button to your bookmarks bar. On any page, click it to send the selected text (or your clipboard, if nothing is selected) straight here — conversion starts automatically.
+              </p>
+              <a href="javascript:void(async()=>{let t=String(getSelection());if(!t.trim()){try{t=await navigator.clipboard.readText()}catch(e){}}if(t&amp;&amp;t.trim()){window.open('https://txt2speech.org/'+String.fromCharCode(35)+'text='+encodeURIComponent(t))}else{alert('Select some text first (or allow clipboard access).')}})()"
+                 onclick="return false;"
+                 title="Drag me to your bookmarks bar"
+                 class="inline-block px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg cursor-grab">
+                🔊 Read with TTS
+              </a>
+            </div>
           </div>
         </div>
       </div>
