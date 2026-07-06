@@ -1,7 +1,7 @@
 import { requestKokoroTTS, populateKokoroVoiceSelect } from './kokoro-tts.js';
 import { openDatabase, storeDataInIndexedDB, getDataFromIndexedDB, deleteDataFromIndexedDB } from './database.js';
 import { storeAudioChunk, combineGeneratedAudio } from './audioChunks.js';
-import { setCookie } from './utils.js';
+import { setCookie, getCookie } from './utils.js';
 import { StreamingPlayer } from './streaming-player.js';
 
 var text = "";
@@ -177,15 +177,22 @@ async function initializeStoredData() {
     // Populate Kokoro voice select (restores the saved voice from its cookie)
     populateKokoroVoiceSelect(document.getElementById('kokoro-voice-select'));
 
+    // Restore the bookmarklet auto-convert preference (default: on)
+    const autoConvert = document.getElementById('auto-convert');
+    autoConvert.checked = getCookie('bookmarklet-auto-convert') !== 'false';
+
     // Text shared via the bookmarklet (#text=... fragment) takes precedence
-    // over any stored session: fill the textarea and convert immediately.
+    // over any stored session: fill the textarea and, if enabled, convert
+    // immediately.
     const sharedText = consumeSharedText();
     if (sharedText) {
         await clearSession();
         const ta = document.getElementById('text-input');
         ta.value = sharedText;
         ta.dispatchEvent(new Event('input', { bubbles: true }));
-        convertTextToSpeech();
+        if (autoConvert.checked) {
+            convertTextToSpeech();
+        }
         return;
     }
 
@@ -219,6 +226,9 @@ async function initializeStoredData() {
 // Persist the chosen voice
 document.getElementById('kokoro-voice-select').addEventListener('change', (e) => {
     setCookie('kokoro-voice-select', e.target.value);
+});
+document.getElementById('auto-convert').addEventListener('change', (e) => {
+    setCookie('bookmarklet-auto-convert', e.target.checked);
 });
 document.getElementById('convert-button').addEventListener('click', convertTextToSpeech);
 
