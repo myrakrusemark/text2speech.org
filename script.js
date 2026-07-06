@@ -1,9 +1,7 @@
-import { requestOpenAITTS } from './openai-tts.js';
-import { requestNabuCasaTTS, populateNabuCasaVoiceSelect } from './nabu-casa-tts.js';
 import { requestKokoroTTS, populateKokoroVoiceSelect } from './kokoro-tts.js';
 import { openDatabase, storeDataInIndexedDB, getDataFromIndexedDB, deleteDataFromIndexedDB } from './database.js';
 import { storeAudioChunk, combineGeneratedAudio } from './audioChunks.js';
-import { saveCredentials, loadCredentials, saveAppSettings, loadAppSettings } from './utils.js';
+import { setCookie } from './utils.js';
 import { StreamingPlayer } from './streaming-player.js';
 
 var text = "";
@@ -13,10 +11,6 @@ let processedChunks = 0;
 let completedChunks = 0;
 let totalChunks = 0;
 let canceled = false;
-let openaiApiKey = ""
-let nabuCasaServer = "";
-let nabuCasaBearer = "";
-let activeTTSTab = "kokoro"
 let wakeLock = null;
 
 
@@ -179,46 +173,9 @@ async function initializeStoredData() {
     db = await openDatabase();
     const requiredItems = ['text', 'fileName', 'totalChunks', 'fileId'];
     const allItemsPresent = (await Promise.all(requiredItems.map(async item => await getDataFromIndexedDB(item) !== null))).every(Boolean);
-    
-    [openaiApiKey, nabuCasaServer, nabuCasaBearer] = await loadCredentials();
 
-    activeTTSTab = await loadAppSettings();
-
-    // Show/hide tab content based on active tab
-    document.querySelectorAll('.tab-content').forEach(content => {
-        if (content.id === activeTTSTab) {
-            console.log("showing tab: "+activeTTSTab)
-            content.classList.remove('hidden');
-            content.classList.add('fade-in');
-        } else {
-            content.classList.add('hidden');
-            content.classList.remove('fade-in');
-        }
-    });
-
-    // Update tab button states
-    document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(button => {
-        const isActive = button.getAttribute('data-tab') === activeTTSTab;
-        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        button.setAttribute('tabindex', isActive ? '0' : '-1');
-        if (isActive) {
-            button.classList.add('active', 'bg-blue-600', 'text-white');
-            button.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
-        } else {
-            button.classList.remove('active', 'bg-blue-600', 'text-white');
-            button.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
-        }
-    });
-
-    //populateNabuCasaVoiceSelect(
-    //    document.getElementById('nabu-casa-server').value, 
-    //    document.getElementById('nabu-casa-bearer').value, 
-    //    "cloud");
-
-    // Populate Kokoro voice select
-    const kokoroVoiceSelectElement = document.getElementById('kokoro-voice-select');
-    populateKokoroVoiceSelect(kokoroVoiceSelectElement);
-    
+    // Populate Kokoro voice select (restores the saved voice from its cookie)
+    populateKokoroVoiceSelect(document.getElementById('kokoro-voice-select'));
 
     if (allItemsPresent) {
         text = await getDataFromIndexedDB('text');
@@ -247,14 +204,10 @@ async function initializeStoredData() {
 }
 
 //Add event listeners
-// Save credentials and app settings when UI changes
-document.getElementById('openai-api-key').addEventListener('input', saveCredentialsHandler);
-document.getElementById('nabu-casa-server').addEventListener('input', saveCredentialsHandler);
-document.getElementById('nabu-casa-bearer').addEventListener('input', saveCredentialsHandler);
-document.getElementById('openai-voice-select').addEventListener('change', saveAppSettingsHandler);
-document.getElementById('nabu-casa-voice-select').addEventListener('change', saveAppSettingsHandler);
-document.getElementById('kokoro-voice-select').addEventListener('change', saveAppSettingsHandler);
-document.getElementById('hd-audio').addEventListener('change', saveAppSettingsHandler);
+// Persist the chosen voice
+document.getElementById('kokoro-voice-select').addEventListener('change', (e) => {
+    setCookie('kokoro-voice-select', e.target.value);
+});
 document.getElementById('convert-button').addEventListener('click', convertTextToSpeech);
 
 // Keyboard shortcut: Ctrl+Enter (or Cmd+Enter) converts from the textarea
@@ -279,22 +232,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// WAI-ARIA tabs pattern: arrow keys move between engine tabs
-document.getElementById('tts-engine-tabs').addEventListener('keydown', (e) => {
-    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
-    if (!keys.includes(e.key)) return;
-    const tabs = Array.from(document.querySelectorAll('#tts-engine-tabs .tab-button'));
-    const current = tabs.indexOf(document.activeElement);
-    if (current === -1) return;
-    e.preventDefault();
-    let next;
-    if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = tabs.length - 1;
-    else next = (current + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    tabs[next].focus();
-    tabs[next].click();
-});
-
 // Resume-prompt buttons
 function showResumePrompt(done, total) {
     document.getElementById('resume-message').textContent =
@@ -316,55 +253,6 @@ document.getElementById('discard-btn').addEventListener('click', () => {
     hideResumePrompt();
     clearSession();
 });
-
-// Tab changes
-document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(tab => {
-    tab.addEventListener('click', async function() {
-        // Update UI first
-        const tabId = this.getAttribute('data-tab');
-        
-        // Update tab button states
-        document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(button => {
-            const isActive = button.getAttribute('data-tab') === tabId;
-            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            button.setAttribute('tabindex', isActive ? '0' : '-1');
-            if (isActive) {
-                button.classList.add('active', 'bg-blue-600', 'text-white');
-                button.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
-            } else {
-                button.classList.remove('active', 'bg-blue-600', 'text-white');
-                button.classList.add('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
-            }
-        });
-
-        // Update tab content visibility
-        document.querySelectorAll('.tab-content').forEach(content => {
-            if (content.id === tabId) {
-                content.classList.remove('hidden');
-                content.classList.add('fade-in');
-            } else {
-                content.classList.add('hidden');
-                content.classList.remove('fade-in');
-            }
-        });
-        
-        // Then save settings
-        await saveAppSettingsHandler();
-    });
-});
-
-async function saveAppSettingsHandler(){
-    activeTTSTab = await saveAppSettings(text);
-    console.log("new tts: "+activeTTSTab)
-}
-
-function saveCredentialsHandler(){
-    console.log("saving credentials")
-    saveCredentials(
-        document.getElementById('openai-api-key').value, 
-        document.getElementById('nabu-casa-server').value, 
-        document.getElementById('nabu-casa-bearer').value);
-}
 
 // Call initializeStoredData when the window loads
 window.addEventListener('load', initializeStoredData);
@@ -411,21 +299,6 @@ async function convertTextToSpeech() {
     if (!filename) filename = "pasted-text";
 
     clearError();
-
-    if (activeTTSTab == "openai" && !openaiApiKey) {
-        showError('Please enter your OpenAI API key (in Settings).');
-        return;
-    }
-
-    if (activeTTSTab == "nabu-casa" && !nabuCasaServer) {
-        showError('Please enter your Nabu Casa server address (in Settings).');
-        return;
-    }
-
-    if (activeTTSTab == "nabu-casa" && !nabuCasaBearer) {
-        showError('Please enter your Nabu Casa bearer token (in Settings).');
-        return;
-    }
 
     if (!text.trim()) {
         showError('Please provide input text.');
@@ -477,21 +350,12 @@ async function processText(text, processingBar, completedBar) {
     completedChunks = parseInt(await getDataFromIndexedDB('completedChunks')) || 0;
     processedChunks = completedChunks;
 
-    //activeTTSTab = document.querySelector('#tts-engine-tabs .tab-button.active').getAttribute('data-tab');
-
     for (var [index, chunk] of chunks.slice(completedChunks).entries()) {
 
         if (canceled) {
             canceled = false;
             return;
         }else{
-            //Home Assistant asyncio.CancelledError issue causes caching/processing issue where, if a request is canceled, a request with the same text cannot be processed again (until cache is cleared).
-            //HA audio files are named with a hash of the content. Add a non-spoken character to the chunk so the hash will be different, and the continuation is successful.
-            if (activeTTSTab == "nabu-casa" && index == 0 && completedChunks > 0){
-                console.log("Continuing with Nabu Case!")
-                chunk = chunk + " "
-            }
-
             // Update progress before processing the chunk
             if(!canceled){
                 processedChunks++;
@@ -499,46 +363,19 @@ async function processText(text, processingBar, completedBar) {
             updateConversionStatus(completedChunks, chunks.length);
 
             updateProgressBar(processingBar, (processedChunks / chunks.length) * 100);
-            processingBar.classList.remove('processing-lightgreen');
 
-            let audioBlob;
-            console.log("Current TTS: "+activeTTSTab)
-            switch (activeTTSTab) {
-                case 'openai':
-                audioBlob = await requestOpenAITTS(
-                    openaiApiKey,
-                    chunk,
-                    document.getElementById('openai-voice-select').value,
-                    document.getElementById('hd-audio').checked);
-                if (audioBlob) enqueueSegment(audioBlob);
-                break;
-                case 'nabu-casa':
-                const [language, voice] = document.getElementById('nabu-casa-voice-select').value.split(" ");
-
-                audioBlob = await requestNabuCasaTTS(
-                    chunk,
-                    document.getElementById('nabu-casa-server').value,
-                    document.getElementById('nabu-casa-bearer').value,
-                    language,
-                    voice);
-                if (audioBlob) enqueueSegment(audioBlob);
-                break;
-                case 'kokoro':
-                    // Kokoro streams sentence-sized segments into the preview.
-                    // Advance the green bar per segment: green means "this
-                    // audio is synthesized and listenable".
-                    const chunkBase = completedChunks;
-                    audioBlob = await requestKokoroTTS(
-                        chunk,
-                        document.getElementById('kokoro-voice-select').value,
-                        (blob, segIndex, segTotal) => {
-                            enqueueSegment(blob);
-                            const fraction = (chunkBase + (segIndex + 1) / segTotal) / chunks.length;
-                            updateProgressBar(completedBar, fraction * 100);
-                        });
-                    break;
-
-            }
+            // Kokoro streams sentence-sized segments into the player.
+            // Advance the green bar per segment: green means "this audio
+            // is synthesized and listenable".
+            const chunkBase = completedChunks;
+            const audioBlob = await requestKokoroTTS(
+                chunk,
+                document.getElementById('kokoro-voice-select').value,
+                (blob, segIndex, segTotal) => {
+                    enqueueSegment(blob);
+                    const fraction = (chunkBase + (segIndex + 1) / segTotal) / chunks.length;
+                    updateProgressBar(completedBar, fraction * 100);
+                });
 
             if (!canceled && audioBlob) {
                 await storeAudioChunk(storeDataInIndexedDB, audioBlob, completedChunks, fileId);
@@ -567,10 +404,7 @@ async function processText(text, processingBar, completedBar) {
 
         const combinedAudioBlob = await combineGeneratedAudio(fileId);
         if (combinedAudioBlob) {
-            // Get the extension from the active tab button's data-extension attribute
-            const activeTabButton = document.querySelector('#tts-engine-tabs .tab-button.active');
-            const ext = activeTabButton.getAttribute('data-extension');
-            finalizeOutput(combinedAudioBlob, ext);
+            finalizeOutput(combinedAudioBlob, '.wav');
         } else {
             console.error(`Failed to combine audio chunks for ${filename}`);
         }
@@ -725,7 +559,6 @@ async function clearSession() {
         document.getElementById('conversion-label').textContent = 'Ready';
         updateProgressBar(processingBar, 0);
         updateProgressBar(completedBar, 0);
-        processingBar.classList.remove('processing-lightgreen');
 
         // Reset player, output buttons, and prompts
         player.reset();

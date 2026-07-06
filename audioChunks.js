@@ -6,7 +6,6 @@ export async function storeAudioChunk(storeDataInIndexedDB, chunk, index, fileId
 
 async function getAndCombineAudioChunks(chunkCount, fileId) {
     const chunks = [];
-    let format = '';
 
     for (let i = 0; i < chunkCount; i++) {
         const chunkKey = `audioChunk_${fileId}_${i}`;
@@ -17,16 +16,7 @@ async function getAndCombineAudioChunks(chunkCount, fileId) {
         chunks.push(chunk);
     }
 
-    const activeTabButton = document.querySelector('#tts-engine-tabs .tab-button.active');
-    const ext = activeTabButton.getAttribute('data-extension');
-
-    if (ext === '.wav') {
-        return await combineWAVChunks(chunks);
-    } else if (ext === '.mp3') {
-        return await combineMPEGChunks(chunks);
-    } else {
-        throw new Error('Unsupported audio format: '+format);
-    }
+    return await combineWAVChunks(chunks);
 }
 
 async function combineWAVChunks(chunks) {
@@ -65,14 +55,6 @@ async function combineWAVChunks(chunks) {
         totalLength += audioData.byteLength;
     }
 
-    // Concatenate the audio data chunks
-    const combinedAudioData = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const audioData of audioDataChunks) {
-        combinedAudioData.set(new Uint8Array(audioData), offset);
-        offset += audioData.byteLength;
-    }
-
     // Create a new WAV file header matching the source chunks' format
     const bytesPerSample = bitsPerSample / 8;
     const headerBuffer = new ArrayBuffer(44);
@@ -94,54 +76,10 @@ async function combineWAVChunks(chunks) {
     headerView.setUint32(40, totalLength, true); // Data chunk size
 
     // Concatenate the WAV header and audio data
-    const wavFileBlob = new Blob([headerBuffer, combinedAudioData], { type: 'audio/wav' });
-    return wavFileBlob;
+    return new Blob([headerBuffer, ...audioDataChunks], { type: 'audio/wav' });
 }
-
-async function combineMPEGChunks(chunks) {
-    const audioDataChunks = [];
-
-    for (const chunk of chunks) {
-        const audioData = await chunk.arrayBuffer();
-        audioDataChunks.push(audioData);
-    }
-
-    // Concatenate the MPEG audio data chunks
-    const combinedAudioData = new Blob(audioDataChunks, { type: 'audio/mpeg' });
-    return combinedAudioData;
-}
-
-/*function detectAudioFormat(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            const arr = new Uint8Array(reader.result);
-            console.log('First 4 bytes:', arr[0], arr[1], arr[2], arr[3]);
-            if (arr[0] === 0x52 && arr[1] === 0x49 && arr[2] === 0x46 && arr[3] === 0x46) {
-                console.log('Detected WAV format');
-                resolve('audio/wav');
-            } else if (arr[0] === 0x49 && arr[1] === 0x44 && arr[2] === 0x33) {
-                console.log('Detected MP3 format');
-                resolve('audio/mpeg');
-            } else {
-                console.log('Unknown format, defaulting to MP3');
-                resolve('audio/mpeg');
-            }
-        };
-        reader.onerror = function(error) {
-            console.error('Error reading blob:', error);
-            reject(error);
-        };
-        reader.readAsArrayBuffer(blob.slice(0, 4));
-    });
-}*/
 
 export async function combineGeneratedAudio(fileId) {
     const chunkCount = parseInt(await getDataFromIndexedDB('completedChunks'));
-    console.log("completed chunks: " + chunkCount);
-    const combinedBlob = await getAndCombineAudioChunks(chunkCount, fileId);
-    const activeTabButton = document.querySelector('#tts-engine-tabs .tab-button.active');
-    const ext = activeTabButton.getAttribute('data-extension');
-    const mimeType = ext === '.wav' ? 'audio/wav' : 'audio/mpeg';
-    return new Blob([combinedBlob], { type: mimeType });
+    return await getAndCombineAudioChunks(chunkCount, fileId);
 }

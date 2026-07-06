@@ -157,110 +157,23 @@
         
         <!-- Settings panel -->
         <div id="settings-panel" class="border-t border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out overflow-hidden max-h-0">
-          <div class="p-4 space-y-6">
-            <!-- TTS Engine Tabs -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                TTS Engine
-              </label>
-              <div id="tts-engine-tabs" role="tablist" aria-label="TTS Engine" class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
-                <button data-tab="kokoro" data-extension=".wav" role="tab" aria-selected="true" tabindex="0" aria-controls="kokoro" class="tab-button active flex-1 py-2 px-3 rounded-lg font-medium text-sm bg-blue-600 text-white">
-                  Kokoro <span class="ml-1 px-1.5 py-0.5 text-xs bg-green-800 text-white rounded-full">RECOMMENDED</span>
-                </button>
-                <button data-tab="openai" data-extension=".mp3" role="tab" aria-selected="false" tabindex="-1" aria-controls="openai" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                  OpenAI
-                </button>
-                <button data-tab="nabu-casa" data-extension=".mp3" role="tab" aria-selected="false" tabindex="-1" aria-controls="nabu-casa" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                  Nabu Casa
-                </button>
-              </div>
-
-              <!-- OpenAI Tab Content -->
-              <div id="openai" role="tabpanel" class="tab-content space-y-4 hidden">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-api-key">
-                    OpenAI API Key
-                  </label>
-                  <input type="password" id="openai-api-key" autocomplete="off" placeholder="Enter your API key" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-voice-select">
-                    Voice
-                  </label>
-                  <div class="flex items-center">
-                    <select id="openai-voice-select" class="flex-1 px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="nova">Nova</option>
-                      <option value="alloy">Alloy</option>
-                      <option value="echo">Echo</option>
-                      <option value="fable">Fable</option>
-                      <option value="onyx">Onyx</option>
-                      <option value="shimmer">Shimmer</option>
-                    </select>
-                    <div class="ml-3 flex items-center">
-                      <input type="checkbox" id="hd-audio" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                      <label for="hd-audio" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                        HD
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Nabu Casa Tab Content -->
-              <div id="nabu-casa" role="tabpanel" class="tab-content space-y-4 hidden">
-                <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  <p>
-                    If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.
-                  </p>
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-server">
-                    Server Address
-                  </label>
-                  <input type="text" id="nabu-casa-server" placeholder="Enter Nabu Casa server address" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-bearer">
-                    Bearer Token
-                  </label>
-                  <input type="password" id="nabu-casa-bearer" autocomplete="off" placeholder="Enter bearer token" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-voice-select">
-                    Voice
-                  </label>
-                  <select id="nabu-casa-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option>Please wait...</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Kokoro Tab Content -->
-              <div id="kokoro" role="tabpanel" class="tab-content space-y-4 fade-in">
-                <div class="text-sm text-gray-600 dark:text-gray-400">
-                  <p class="mb-2">
-                    Free, unlimited, and private: <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Kokoro</a> runs entirely in your browser — nothing you type leaves your device.
-                  </p>
-                  <p class="mb-2">
-                    The first conversion downloads the voice model (about 90&ndash;330&nbsp;MB depending on your hardware); it is cached for future visits. English voices only.
-                  </p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="kokoro-voice-select">
-                        Select Voice:
-                    </label>
-                    <select id="kokoro-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option>Please wait...</option>
-                    </select>
-                </div>
-              </div>
-
+          <div class="p-4 space-y-4">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              <p class="mb-2">
+                Free, unlimited, and private: <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Kokoro</a> runs entirely in your browser &mdash; nothing you type leaves your device.
+              </p>
+              <p class="mb-2">
+                The first conversion downloads the voice model (about 90&ndash;330&nbsp;MB depending on your hardware); it is cached for future visits. English voices only.
+              </p>
             </div>
-
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="kokoro-voice-select">
+                Voice
+              </label>
+              <select id="kokoro-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option>Please wait...</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
