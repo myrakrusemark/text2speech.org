@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free text to speech converter. Convert text or .txt files to natural-sounding downloadable audio, entirely in your browser.">
   <title>Text to Speech Converter</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <!-- Tailwind CSS -->
@@ -20,15 +21,27 @@
     .tab-transition {
       transition: all 0.2s ease-in-out;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+  <!-- Screen-reader announcements (player availability, completion) -->
+  <div id="sr-announcer" class="sr-only" aria-live="polite"></div>
+
   <div class="max-w-screen-lg mx-auto p-4 font-sans">
-    <div class="mb-8 text-center">
+    <header class="mb-8 text-center">
       <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Text to Speech</h1>
       <p class="text-gray-500 mt-2">Convert your text to natural-sounding speech</p>
-    </div>
-    
+    </header>
+
+    <main>
+
     <div class="max-w-xl mx-auto rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <!-- Main container -->
       <div class="relative">
@@ -62,7 +75,7 @@
           </div>
           
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            or click anywhere to type
+            or click / tab into the text area to type
           </div>
         </div>
         
@@ -73,16 +86,32 @@
       <!-- Progress Bar -->
       <div id="progress-container">
         <div class="px-4 py-2">
-          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 relative">
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 relative" aria-hidden="true">
             <div id="processing" class="bg-blue-600 h-2 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 0%"></div>
             <div id="completed" class="bg-green-500 h-2 rounded-full transition-all duration-300 absolute top-0 left-0" style="width: 0%"></div>
           </div>
-          <div class="flex justify-between mt-1">
+          <div class="flex justify-between mt-1" role="status" aria-live="polite">
             <span id="conversion-label" class="text-sm text-gray-500 dark:text-gray-400"></span>
             <span id="conversion-status" class="text-sm text-gray-500 dark:text-gray-400">--</span>
           </div>
         </div>
       </div>
+
+      <!-- Resume prompt (shown when an unfinished conversion is found) -->
+      <div id="resume-prompt" class="hidden px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-gray-700/50">
+        <p id="resume-message" role="alert" class="text-sm text-gray-700 dark:text-gray-200 mb-2"></p>
+        <div class="flex gap-3">
+          <button id="resume-btn" class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+            Resume
+          </button>
+          <button id="discard-btn" class="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 font-medium rounded-lg transition-colors">
+            Discard
+          </button>
+        </div>
+      </div>
+
+      <!-- Validation errors -->
+      <div id="form-error" role="alert" class="hidden px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-sm text-red-600 dark:text-red-400"></div>
       
       <!-- Controls -->
       <div class="border-t border-gray-200 dark:border-gray-700">
@@ -104,10 +133,21 @@
               </svg>
               Stop
             </button>
+
+            <button id="download-button" class="hidden flex items-center justify-center px-4 py-2 rounded-lg font-medium bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+              Download
+            </button>
+
+            <button id="convert-another-button" class="hidden px-4 py-2 rounded-lg font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              Convert another
+            </button>
           </div>
           
           <!-- Settings toggle -->
-          <button id="settings-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle Settings">
+          <button id="settings-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle Settings" aria-expanded="false" aria-controls="settings-panel">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -123,49 +163,25 @@
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 TTS Engine
               </label>
-              <div id="tts-engine-tabs" class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
-                <button data-tab="piper" data-extension=".wav" class="tab-button active flex-1 py-2 px-3 rounded-lg font-medium text-sm bg-blue-600 text-white">
-                  Piper Local <span class="ml-1 px-1.5 py-0.5 text-xs bg-green-500 rounded-full">RECOMMENDED</span>
+              <div id="tts-engine-tabs" role="tablist" aria-label="TTS Engine" class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4">
+                <button data-tab="kokoro" data-extension=".wav" role="tab" aria-selected="true" tabindex="0" aria-controls="kokoro" class="tab-button active flex-1 py-2 px-3 rounded-lg font-medium text-sm bg-blue-600 text-white">
+                  Kokoro <span class="ml-1 px-1.5 py-0.5 text-xs bg-green-800 text-white rounded-full">RECOMMENDED</span>
                 </button>
-                <button data-tab="openai" data-extension=".mp3" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <button data-tab="openai" data-extension=".mp3" role="tab" aria-selected="false" tabindex="-1" aria-controls="openai" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                   OpenAI
                 </button>
-                <button data-tab="nabu-casa" data-extension=".mp3" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <button data-tab="nabu-casa" data-extension=".mp3" role="tab" aria-selected="false" tabindex="-1" aria-controls="nabu-casa" class="tab-button flex-1 py-2 px-3 rounded-lg font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                   Nabu Casa
                 </button>
               </div>
-              
-              <!-- Piper Local Tab Content -->
-              <div id="piper" class="tab-content space-y-4 fade-in">
-                <div class="text-sm text-gray-600 dark:text-gray-400">
-                  <p class="mb-2">
-                    Thank you, <a href="https://wide.video" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Wide Video</a>, for the Web Assembly Piper TTS! (<a href="https://piper.wide.video/" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">https://piper.wide.video/</a>)
-                  </p>
-                  <p class="mb-2">
-                    Some voices may cause errors. If a voice is causing you trouble, please submit an issue on <a href="https://github.com/myrakrusemark/text2speech.org" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a>.
-                  </p>
-                  <p class="mb-2">
-                    8GB RAM required. 16GB RAM recommended.
-                  </p>
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="piper-voice-select">
-                    Select Voice:
-                  </label>
-                  <select id="piper-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option>Please wait...</option>
-                  </select>
-                </div>
-              </div>
-              
+
               <!-- OpenAI Tab Content -->
-              <div id="openai" class="tab-content space-y-4 hidden">
+              <div id="openai" role="tabpanel" class="tab-content space-y-4 hidden">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="openai-api-key">
                     OpenAI API Key
                   </label>
-                  <input type="text" id="openai-api-key" placeholder="Enter your API key" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="password" id="openai-api-key" autocomplete="off" placeholder="Enter your API key" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 
                 <div>
@@ -192,7 +208,7 @@
               </div>
               
               <!-- Nabu Casa Tab Content -->
-              <div id="nabu-casa" class="tab-content space-y-4 hidden">
+              <div id="nabu-casa" role="tabpanel" class="tab-content space-y-4 hidden">
                 <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   <p>
                     If running locally (HTTP), you can set "Server Address" to your local LAN address (HTTP). On https://text2speech.org, you must use your nabu casa hosted address, or other HTTPS address.
@@ -210,7 +226,7 @@
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="nabu-casa-bearer">
                     Bearer Token
                   </label>
-                  <input type="text" id="nabu-casa-bearer" placeholder="Enter bearer token" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="password" id="nabu-casa-bearer" autocomplete="off" placeholder="Enter bearer token" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 
                 <div>
@@ -222,20 +238,74 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Kokoro Tab Content -->
+              <div id="kokoro" role="tabpanel" class="tab-content space-y-4 fade-in">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <p class="mb-2">
+                    Free, unlimited, and private: <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Kokoro</a> runs entirely in your browser — nothing you type leaves your device.
+                  </p>
+                  <p class="mb-2">
+                    The first conversion downloads the voice model (about 90&ndash;330&nbsp;MB depending on your hardware); it is cached for future visits. English voices only.
+                  </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="kokoro-voice-select">
+                        Select Voice:
+                    </label>
+                    <select id="kokoro-voice-select" class="w-full px-3 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option>Please wait...</option>
+                    </select>
+                </div>
+              </div>
+
             </div>
+
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Output Files Card -->
-    <div class="max-w-xl mx-auto mt-6 rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Output File</h2>
-      </div>
-      <div id="results" class="divide-y divide-gray-200 dark:divide-gray-700">
+    </main>
 
+    <!-- Spacer so the fixed player bar never covers content -->
+    <div class="h-28" aria-hidden="true"></div>
+  </div>
+
+  <!-- Bottom audio player: live stream during conversion, finished file after -->
+  <div id="player-bar" role="region" aria-label="Audio player"
+       class="fixed bottom-0 inset-x-0 z-20 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_16px_rgba(0,0,0,0.2)] transform transition-transform duration-300 translate-y-full"
+       aria-hidden="true">
+    <div class="max-w-xl mx-auto px-4 py-3 flex items-center gap-4">
+      <button id="player-toggle" aria-label="Play" class="shrink-0 p-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors">
+        <svg id="player-play-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+        </svg>
+        <svg id="player-pause-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+      </button>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-baseline mb-1 gap-2">
+          <span id="player-title" class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate"></span>
+          <span id="player-time" class="text-xs tabular-nums text-gray-500 dark:text-gray-400 shrink-0">0:00 / 0:00</span>
+        </div>
+        <input id="player-seek" type="range" min="0" max="100" step="0.1" value="0"
+               class="w-full h-2 accent-blue-600 cursor-pointer" aria-label="Seek" aria-valuetext="0:00">
       </div>
+
+      <button id="player-download" aria-label="Download audio" class="hidden shrink-0 p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
+
+      <button id="player-close" aria-label="Close player" class="shrink-0 p-2 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -249,9 +319,7 @@
       const fileInput = document.getElementById('file-input');
       const settingsToggle = document.getElementById('settings-toggle');
       const settingsPanel = document.getElementById('settings-panel');
-      const progressBar = document.getElementById('progress-bar');
-      const progressBar2 = document.getElementById('progress-bar-2');
-      
+
       let isSettingsOpen = false;
 
       // Handle text input changes
@@ -280,34 +348,21 @@
         try {
           const clipboardText = await navigator.clipboard.readText();
           textInput.value = clipboardText;
+          // Programmatic value changes don't fire 'input', but script.js
+          // relies on it to update its state — dispatch it manually.
+          textInput.dispatchEvent(new Event('input', { bubbles: true }));
           emptyState.style.display = 'none';
         } catch (err) {
           console.error('Failed to read clipboard contents: ', err);
           alert('Unable to access clipboard. Please check your browser permissions.');
         }
       });
-      
-      // Handle file upload button
+
+      // Handle file upload button (file reading itself is handled in script.js)
       uploadBtn.addEventListener('click', () => {
         fileInput.click();
       });
-      
-      // Handle file selection
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        
-        if (file && file.type === 'text/plain') {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            textInput.value = event.target.result;
-            emptyState.style.display = 'none';
-          };
-          reader.readAsText(file);
-        } else if (file) {
-          alert('Please upload a valid text file (.txt)');
-        }
-      });
-      
+
       // Handle click on empty state (to focus textarea)
       emptyState.addEventListener('click', (e) => {
         if (e.target === emptyState) {
@@ -319,6 +374,7 @@
       function toggleSettings() {
         isSettingsOpen = !isSettingsOpen;
         
+        settingsToggle.setAttribute('aria-expanded', isSettingsOpen ? 'true' : 'false');
         if (isSettingsOpen) {
           settingsPanel.style.maxHeight = '1000px';
           settingsToggle.classList.add('bg-gray-200', 'dark:bg-gray-700');
@@ -330,31 +386,6 @@
       
       // Event Listeners
       settingsToggle.addEventListener('click', toggleSettings);
-      
-      // Function to update progress bars
-      function updateProgressBars(processingValue, completedValue) {
-        progressBar.style.width = `${processingValue}%`;
-        progressBar2.style.width = `${completedValue}%`;
-      }
-
-      // Create a MutationObserver to watch for changes to the progress bars
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-            const processingBar = document.getElementById('processing');
-            const completedBar = document.getElementById('completed');
-            if (processingBar && completedBar) {
-              updateProgressBars(processingBar.value, completedBar.value);
-            }
-          }
-        });
-      });
-
-      // Start observing the progress bars
-      const processingBar = document.getElementById('processing');
-      const completedBar = document.getElementById('completed');
-      if (processingBar) observer.observe(processingBar, { attributes: true });
-      if (completedBar) observer.observe(completedBar, { attributes: true });
     });
   </script>
   <script type="module" src="script.js"></script>

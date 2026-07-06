@@ -1,9 +1,10 @@
 import { requestOpenAITTS } from './openai-tts.js';
 import { requestNabuCasaTTS, populateNabuCasaVoiceSelect } from './nabu-casa-tts.js';
-import { requestPiperTTS } from './piper-tts.js';
+import { requestKokoroTTS, populateKokoroVoiceSelect } from './kokoro-tts.js';
 import { openDatabase, storeDataInIndexedDB, getDataFromIndexedDB, deleteDataFromIndexedDB } from './database.js';
 import { storeAudioChunk, combineGeneratedAudio } from './audioChunks.js';
 import { saveCredentials, loadCredentials, saveAppSettings, loadAppSettings } from './utils.js';
+import { StreamingPlayer } from './streaming-player.js';
 
 var text = "";
 var chunks = [];
@@ -12,13 +13,10 @@ let processedChunks = 0;
 let completedChunks = 0;
 let totalChunks = 0;
 let canceled = false;
-let continued = false;
-let hasDownloadableFiles = false;
 let openaiApiKey = ""
 let nabuCasaServer = "";
 let nabuCasaBearer = "";
-let activeTTSTab = "piper"
-let piperVoiceSelect = ""
+let activeTTSTab = "kokoro"
 let wakeLock = null;
 
 
@@ -27,6 +25,151 @@ const chunkSize = 2048;
 const processingBar = document.getElementById('processing');
 const completedBar = document.getElementById('completed');
 const cancelButton = document.getElementById('cancel-button')
+
+// Bottom player bar: streams audio live during conversion, then serves as
+// the player for the finished file.
+const playerBar = document.getElementById('player-bar');
+const playerToggle = document.getElementById('player-toggle');
+const playerSeek = document.getElementById('player-seek');
+const playerTime = document.getElementById('player-time');
+const playerTitle = document.getElementById('player-title');
+const playerDownload = document.getElementById('player-download');
+const player = new StreamingPlayer(updatePlayerUI);
+
+let pendingFilename = '';   // filename (no extension) of the conversion in progress
+let finalFilename = '';     // full filename of the finished file
+let finalUrl = null;        // object URL of the finished file
+let seeking = false;        // true while the user drags the seek slider
+
+function updatePlayerUI(p) {
+    document.getElementById('player-play-icon').classList.toggle('hidden', p.playing);
+    document.getElementById('player-pause-icon').classList.toggle('hidden', !p.playing);
+    playerToggle.setAttribute('aria-label', p.playing ? 'Pause' : 'Play');
+}
+
+function formatTime(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// Keep the seek bar and clock in sync with playback (and with the growing
+// stream while conversion is running).
+setInterval(() => {
+    if (playerBar.getAttribute('aria-hidden') === 'true' || seeking) return;
+    const duration = player.totalDuration;
+    const position = player.getPosition();
+    playerSeek.value = duration ? (position / duration) * 100 : 0;
+    playerSeek.setAttribute('aria-valuetext', formatTime(position));
+    playerTime.textContent =
+        `${formatTime(position)} / ${formatTime(duration)}${player.complete ? '' : '+'}`;
+}, 250);
+
+playerToggle.addEventListener('click', () => {
+    if (player.playing) {
+        player.pause();
+    } else {
+        player.play();
+    }
+});
+
+playerSeek.addEventListener('input', () => { seeking = true; });
+playerSeek.addEventListener('change', () => {
+    player.seek((playerSeek.value / 100) * player.totalDuration);
+    seeking = false;
+});
+
+playerDownload.addEventListener('click', triggerDownload);
+document.getElementById('player-close').addEventListener('click', () => {
+    hidePlayerBar();
+    document.getElementById('convert-button').focus();
+});
+
+function showPlayerBar() {
+    playerBar.classList.remove('translate-y-full');
+    playerBar.setAttribute('aria-hidden', 'false');
+}
+
+function hidePlayerBar() {
+    player.pause();
+    playerBar.classList.add('translate-y-full');
+    playerBar.setAttribute('aria-hidden', 'true');
+    playerDownload.classList.add('hidden');
+}
+
+let playerAnnounced = false;
+
+function enqueueSegment(blob) {
+    if (playerBar.getAttribute('aria-hidden') === 'true' && !playerAnnounced) {
+        playerAnnounced = true;
+        announce('Audio is ready to preview in the player at the bottom of the page. Press P to play or pause.');
+    }
+    showPlayerBar();
+    player.enqueue(blob).catch(err => console.warn('Preview decode failed:', err));
+}
+
+function triggerDownload() {
+    if (!finalUrl) return;
+    const link = document.createElement('a');
+    link.href = finalUrl;
+    link.download = finalFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Main-section button states: Convert (idle/converting) vs Download +
+// Convert another (done).
+function setDoneState() {
+    document.getElementById('convert-button').classList.add('hidden');
+    document.getElementById('download-button').classList.remove('hidden');
+    document.getElementById('convert-another-button').classList.remove('hidden');
+    document.getElementById('download-button').focus();
+}
+
+function setIdleState() {
+    document.getElementById('convert-button').classList.remove('hidden');
+    document.getElementById('download-button').classList.add('hidden');
+    document.getElementById('convert-another-button').classList.add('hidden');
+}
+
+function finalizeOutput(blob, ext) {
+    if (finalUrl) URL.revokeObjectURL(finalUrl);
+    finalFilename = pendingFilename + ext;
+    finalUrl = URL.createObjectURL(blob);
+    playerTitle.textContent = finalFilename;
+    playerDownload.classList.remove('hidden');
+    showPlayerBar();
+    setDoneState();
+    announce(`Conversion complete. ${finalFilename}, ${formatTime(player.totalDuration)} of audio. Download button is focused.`);
+}
+
+document.getElementById('download-button').addEventListener('click', triggerDownload);
+document.getElementById('convert-another-button').addEventListener('click', async () => {
+    await clearSession();
+    const ta = document.getElementById('text-input');
+    ta.focus();
+    ta.select();
+});
+
+// Polite screen-reader announcement (visually hidden live region)
+function announce(message) {
+    const el = document.getElementById('sr-announcer');
+    el.textContent = '';
+    // Re-set on the next tick so identical messages are re-announced
+    setTimeout(() => { el.textContent = message; }, 50);
+}
+
+function showError(message) {
+    const el = document.getElementById('form-error');
+    el.textContent = message;
+    el.classList.remove('hidden');
+}
+
+function clearError() {
+    const el = document.getElementById('form-error');
+    el.textContent = '';
+    el.classList.add('hidden');
+}
 
 // IndexedDB setup
 let db;
@@ -39,10 +182,7 @@ async function initializeStoredData() {
     
     [openaiApiKey, nabuCasaServer, nabuCasaBearer] = await loadCredentials();
 
-    // Add a small delay to ensure cookie is ready
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    [activeTTSTab, piperVoiceSelect] = await loadAppSettings();
+    activeTTSTab = await loadAppSettings();
 
     // Show/hide tab content based on active tab
     document.querySelectorAll('.tab-content').forEach(content => {
@@ -58,7 +198,10 @@ async function initializeStoredData() {
 
     // Update tab button states
     document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(button => {
-        if (button.getAttribute('data-tab') === activeTTSTab) {
+        const isActive = button.getAttribute('data-tab') === activeTTSTab;
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.setAttribute('tabindex', isActive ? '0' : '-1');
+        if (isActive) {
             button.classList.add('active', 'bg-blue-600', 'text-white');
             button.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
         } else {
@@ -72,6 +215,11 @@ async function initializeStoredData() {
     //    document.getElementById('nabu-casa-bearer').value, 
     //    "cloud");
 
+    // Populate Kokoro voice select
+    const kokoroVoiceSelectElement = document.getElementById('kokoro-voice-select');
+    populateKokoroVoiceSelect(kokoroVoiceSelectElement);
+    
+
     if (allItemsPresent) {
         text = await getDataFromIndexedDB('text');
         chunks = splitTextIntoChunks(text);
@@ -82,16 +230,13 @@ async function initializeStoredData() {
 
         // Set the necessary variables from IndexedDB
         document.getElementById('text-input').value = text;
-        document.getElementById('results').innerHTML = '';
         updateConversionStatus(completedChunks, totalChunks);
         updateProgressBar(processingBar, (processedChunks / totalChunks) * 100);
         updateProgressBar(completedBar, (completedChunks / totalChunks) * 100);
 
-        // Only continue if the conversion was not completed
+        // Only offer to continue if the conversion was not completed
         if (completedChunks < totalChunks) {
-            console.log("Continuing conversion from chunk", completedChunks, "of", totalChunks);
-            // Continue the conversion process
-            convertTextToSpeech();
+            showResumePrompt(completedChunks, totalChunks);
         } else {
             // If conversion was completed, clear the session
             clearSession();
@@ -108,9 +253,69 @@ document.getElementById('nabu-casa-server').addEventListener('input', saveCreden
 document.getElementById('nabu-casa-bearer').addEventListener('input', saveCredentialsHandler);
 document.getElementById('openai-voice-select').addEventListener('change', saveAppSettingsHandler);
 document.getElementById('nabu-casa-voice-select').addEventListener('change', saveAppSettingsHandler);
+document.getElementById('kokoro-voice-select').addEventListener('change', saveAppSettingsHandler);
 document.getElementById('hd-audio').addEventListener('change', saveAppSettingsHandler);
-document.getElementById('piper-voice-select').addEventListener('change', saveAppSettingsHandler);
 document.getElementById('convert-button').addEventListener('click', convertTextToSpeech);
+
+// Keyboard shortcut: Ctrl+Enter (or Cmd+Enter) converts from the textarea
+document.getElementById('text-input').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        convertTextToSpeech();
+    }
+});
+
+// Global shortcut: P toggles the player (when not typing in a form field)
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable]')) return;
+    if ((e.key === 'p' || e.key === 'P') && playerBar.getAttribute('aria-hidden') === 'false') {
+        e.preventDefault();
+        if (player.playing) {
+            player.pause();
+        } else {
+            player.play();
+        }
+    }
+});
+
+// WAI-ARIA tabs pattern: arrow keys move between engine tabs
+document.getElementById('tts-engine-tabs').addEventListener('keydown', (e) => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!keys.includes(e.key)) return;
+    const tabs = Array.from(document.querySelectorAll('#tts-engine-tabs .tab-button'));
+    const current = tabs.indexOf(document.activeElement);
+    if (current === -1) return;
+    e.preventDefault();
+    let next;
+    if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = tabs.length - 1;
+    else next = (current + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
+});
+
+// Resume-prompt buttons
+function showResumePrompt(done, total) {
+    document.getElementById('resume-message').textContent =
+        `An unfinished conversion was found (${done} of ${total} parts done). Resume it?`;
+    document.getElementById('resume-prompt').classList.remove('hidden');
+    document.getElementById('resume-btn').focus();
+}
+
+function hideResumePrompt() {
+    document.getElementById('resume-prompt').classList.add('hidden');
+}
+
+document.getElementById('resume-btn').addEventListener('click', () => {
+    hideResumePrompt();
+    convertTextToSpeech();
+});
+
+document.getElementById('discard-btn').addEventListener('click', () => {
+    hideResumePrompt();
+    clearSession();
+});
 
 // Tab changes
 document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(tab => {
@@ -120,7 +325,10 @@ document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(tab => {
         
         // Update tab button states
         document.querySelectorAll('#tts-engine-tabs .tab-button').forEach(button => {
-            if (button.getAttribute('data-tab') === tabId) {
+            const isActive = button.getAttribute('data-tab') === tabId;
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.setAttribute('tabindex', isActive ? '0' : '-1');
+            if (isActive) {
                 button.classList.add('active', 'bg-blue-600', 'text-white');
                 button.classList.remove('text-gray-700', 'dark:text-gray-300', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
             } else {
@@ -164,22 +372,26 @@ window.addEventListener('load', initializeStoredData);
 // Cancel button
 function handleCancelButtonClick() {
     if (confirm('Are you sure you want to cancel the conversion?')) {
-        clearSession();
         canceled = true;
+        clearSession();
     }
 }
 
 // Listen to file upload
 document.getElementById('file-input').addEventListener('change', async function(event) {
     const file = event.target.files[0];
+    if (!file) return;
+    if (file.type && file.type !== 'text/plain') {
+        alert('Please upload a valid text file (.txt)');
+        return;
+    }
     text = await readFile(file);
-    filename = file.name;
-    document.getElementById('file-name').textContent = filename;
+    filename = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('text-input').value = text;
+    document.getElementById('empty-state').style.display = 'none';
     chunks = splitTextIntoChunks(text);
     totalChunks = chunks.length;
     updateConversionStatus(completedChunks, totalChunks);
-    //displayEstimatedCost(text, activeTTSTab !== "openai");
-    
 });
 
 // Listen to text paste
@@ -193,60 +405,65 @@ document.getElementById('text-input').addEventListener('input', async function()
 });
 
 async function convertTextToSpeech() {
-    const selectedVoice = document.getElementById('openai-voice-select').value;
-    const hdAudio = document.getElementById('hd-audio').checked;
-    const resultsDiv = document.getElementById('results');  
+    // The textarea is the source of truth: programmatic updates (Paste button,
+    // file upload) don't fire 'input' events, so re-read it here.
+    text = document.getElementById('text-input').value;
+    if (!filename) filename = "pasted-text";
 
-    cancelButton.addEventListener('click', handleCancelButtonClick);
-    cancelButton.style.display = 'block';
-    
-    canceled = false;
+    clearError();
 
     if (activeTTSTab == "openai" && !openaiApiKey) {
-        alert('Please enter your OpenAI API key.');
+        showError('Please enter your OpenAI API key (in Settings).');
         return;
     }
 
     if (activeTTSTab == "nabu-casa" && !nabuCasaServer) {
-        alert('Please enter Nabu Casa server address.');
+        showError('Please enter your Nabu Casa server address (in Settings).');
         return;
     }
 
     if (activeTTSTab == "nabu-casa" && !nabuCasaBearer) {
-        alert('Please enter Nabu Casa bearer token.');
-        return;
-    }
-        
-    if (!text) {
-        alert('Please provide input text.');
+        showError('Please enter your Nabu Casa bearer token (in Settings).');
         return;
     }
 
-    if (hasDownloadableFiles) {
-        if (confirm('You have a converted file available for download. If you press okay, it will be erased.')) {
-            hasDownloadableFiles = false;
-            clearSession();  
-        } else {
-            return;
-        }
+    if (!text.trim()) {
+        showError('Please provide input text.');
+        return;
     }
+
+    canceled = false;
+    cancelButton.addEventListener('click', handleCancelButtonClick);
+    cancelButton.style.display = 'block';
+
+    // Fresh player stream; unlocking here (inside the click) satisfies the
+    // browser's autoplay policy for later playback.
+    player.reset();
+    player.unlock();
+    hidePlayerBar();
+    playerAnnounced = false;
+    pendingFilename = filename === "pasted-text" ? createSafeFilename(text) : filename;
+    playerTitle.textContent = pendingFilename;
 
     // Update label to Converting... when conversion starts
     document.getElementById('conversion-label').textContent = 'Converting...';
 
     await storeDataInIndexedDB('text', text)
     await storeDataInIndexedDB('fileName', filename);
-    await processText(text, processingBar, completedBar, resultsDiv);
 
     await requestWakeLock();
-
-    cancelButton.removeEventListener('click', handleCancelButtonClick);
-    cancelButton.style.display = 'none';
+    try {
+        await processText(text, processingBar, completedBar);
+    } finally {
+        releaseWakeLock();
+        cancelButton.removeEventListener('click', handleCancelButtonClick);
+        cancelButton.style.display = 'none';
+    }
 
     console.log('All text processed.');
 }
 
-async function processText(text, processingBar, completedBar, resultsDiv) {
+async function processText(text, processingBar, completedBar) {
     // Get or create fileId from IndexedDB
     let fileId = await getDataFromIndexedDB('fileId');
     if (!fileId) {
@@ -289,26 +506,37 @@ async function processText(text, processingBar, completedBar, resultsDiv) {
             switch (activeTTSTab) {
                 case 'openai':
                 audioBlob = await requestOpenAITTS(
-                    openaiApiKey, 
-                    chunk, 
-                    document.getElementById('openai-voice-select').value, 
+                    openaiApiKey,
+                    chunk,
+                    document.getElementById('openai-voice-select').value,
                     document.getElementById('hd-audio').checked);
+                if (audioBlob) enqueueSegment(audioBlob);
                 break;
                 case 'nabu-casa':
                 const [language, voice] = document.getElementById('nabu-casa-voice-select').value.split(" ");
 
                 audioBlob = await requestNabuCasaTTS(
-                    chunk, 
+                    chunk,
                     document.getElementById('nabu-casa-server').value,
-                    document.getElementById('nabu-casa-bearer').value, 
+                    document.getElementById('nabu-casa-bearer').value,
                     language,
                     voice);
+                if (audioBlob) enqueueSegment(audioBlob);
                 break;
-                case 'piper':
-                audioBlob = await requestPiperTTS(
-                    chunk, 
-                    document.getElementById('piper-voice-select').value);
-                break;
+                case 'kokoro':
+                    // Kokoro streams sentence-sized segments into the preview.
+                    // Advance the green bar per segment: green means "this
+                    // audio is synthesized and listenable".
+                    const chunkBase = completedChunks;
+                    audioBlob = await requestKokoroTTS(
+                        chunk,
+                        document.getElementById('kokoro-voice-select').value,
+                        (blob, segIndex, segTotal) => {
+                            enqueueSegment(blob);
+                            const fraction = (chunkBase + (segIndex + 1) / segTotal) / chunks.length;
+                            updateProgressBar(completedBar, fraction * 100);
+                        });
+                    break;
 
             }
 
@@ -326,6 +554,7 @@ async function processText(text, processingBar, completedBar, resultsDiv) {
                 //}
             } else {
                 console.error(`Failed to synthesize chunk ${completedChunks + index + 1}/${chunks.length}.`);
+                document.getElementById('conversion-label').textContent = 'Error — conversion failed';
                 updateProgressBar(processingBar, 0);
                 updateProgressBar(completedBar, 0);
                 return null;
@@ -334,21 +563,17 @@ async function processText(text, processingBar, completedBar, resultsDiv) {
     }
 
     if (chunks.length > 0) {
+        player.markComplete();
+
         const combinedAudioBlob = await combineGeneratedAudio(fileId);
         if (combinedAudioBlob) {
-            console.log(`Creating download link for ${filename}`);
-
             // Get the extension from the active tab button's data-extension attribute
             const activeTabButton = document.querySelector('#tts-engine-tabs .tab-button.active');
             const ext = activeTabButton.getAttribute('data-extension');
-            const downloadLink = createDownloadLink(combinedAudioBlob, ext);
-
-            resultsDiv.appendChild(downloadLink);
+            finalizeOutput(combinedAudioBlob, ext);
         } else {
             console.error(`Failed to combine audio chunks for ${filename}`);
         }
-
-        releaseWakeLock();
 
         return completedChunks;
     }
@@ -372,10 +597,11 @@ function updateConversionStatus(processed, total) {
 
 // Function to update progress bar safely
 function updateProgressBar(bar, value) {
-    if (isFinite(value)) {
-        bar.style.width = `${value}%`;
-    } else {
-        bar.style.width = '0%';
+    const pct = isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    bar.style.width = `${pct}%`;
+    const track = bar.parentElement;
+    if (track && track.getAttribute('role') === 'progressbar') {
+        track.setAttribute('aria-valuenow', Math.round(pct));
     }
 }
 
@@ -394,7 +620,7 @@ function readFile(file) {
 }
 
 function splitTextIntoChunks(text) {
-    const paragraphs = text.split('\n\n');
+    const paragraphs = text.replace(/\r\n/g, '\n').split('\n\n');
     const chunks = [];
     let currentChunk = '';
 
@@ -474,121 +700,50 @@ function splitByDelimiter(text, delimiter) {
 function createSafeFilename(text) {
     // Remove any non-alphanumeric characters and spaces, convert to lowercase
     const safeText = text.replace(/[^a-zA-Z0-9\s]/g, '').toLowerCase();
-    // Take first 15 characters
-    let baseFilename = safeText.substring(0, 15).trim();
-    
-    // If text was empty or all special characters, use a default
-    if (!baseFilename) {
-        baseFilename = 'text';
-    }
-    
-    // Check if this filename already exists
-    const existingFiles = document.querySelectorAll('#results span');
-    let counter = 1;
-    let finalFilename = baseFilename;
-    
-    while (Array.from(existingFiles).some(span => span.textContent === finalFilename + '.mp3' || span.textContent === finalFilename + '.wav')) {
-        finalFilename = `${baseFilename}-${counter}`;
-        counter++;
-    }
-    
-    return finalFilename;
-}
-
-function createDownloadLink(blob, ext) {
-    // Use the original filename if it's from a file upload, otherwise create a safe filename
-    const fullFilename = filename === "pasted-text" ? createSafeFilename(text) + ext : filename + ext;
-    const url = URL.createObjectURL(blob);
-    
-    const template = `
-        <div class="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-            <div class="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-sm text-gray-700 dark:text-gray-300">${fullFilename}</span>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button class="download-btn px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                    Download
-                </button>
-                <button class="delete-btn p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    `;
-    
-    const container = document.createElement('div');
-    container.innerHTML = template;
-    
-    // Add event listeners
-    container.querySelector('.download-btn').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fullFilename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
-    
-    container.querySelector('.delete-btn').addEventListener('click', () => {
-        container.remove();
-        URL.revokeObjectURL(url);
-        hasDownloadableFiles = false;
-    });
-    
-    hasDownloadableFiles = true;
-    return container;
+    // Take first 15 characters; fall back if empty or all special characters
+    return safeText.substring(0, 15).trim() || 'text';
 }
 
 async function clearSession() {
     try {
         const transaction = db.transaction(['sessionData'], 'readwrite');
         const store = transaction.objectStore('sessionData');
-        const getAllKeysRequest = store.getAllKeys();
+        const keys = await new Promise((resolve, reject) => {
+            const request = store.getAllKeys();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(event.target.errorCode);
+        });
 
-        getAllKeysRequest.onsuccess = async () => {
-            const keys = getAllKeysRequest.result;
+        await Promise.all(keys.map(key => deleteDataFromIndexedDB(key)));
 
-            const deletePromises = keys.map(key => deleteDataFromIndexedDB(key));
-            await Promise.all(deletePromises);
+        processedChunks = 0;
+        completedChunks = 0;
+        chunks = [];
 
-            // Also clear the fileId
-            await deleteDataFromIndexedDB('fileId');
+        // Reset progress bars and status
+        document.getElementById('conversion-status').textContent = '0/0 (0%)';
+        document.getElementById('conversion-label').textContent = 'Ready';
+        updateProgressBar(processingBar, 0);
+        updateProgressBar(completedBar, 0);
+        processingBar.classList.remove('processing-lightgreen');
 
-            processedChunks = 0;
-            completedChunks = 0;
-            chunks = [];
+        // Reset player, output buttons, and prompts
+        player.reset();
+        hidePlayerBar();
+        playerAnnounced = false;
+        setIdleState();
+        if (finalUrl) {
+            URL.revokeObjectURL(finalUrl);
+            finalUrl = null;
+        }
+        hideResumePrompt();
+        clearError();
 
-            document.getElementById('results').textContent = '';
+        releaseWakeLock();
 
-            // Reset progress bars and status
-            console.log("setting status to 0")
-            document.getElementById('conversion-status').textContent = '0/0 (0%)';
-            document.getElementById('conversion-label').textContent = 'Ready';
-            updateProgressBar(processingBar, 0);
-            updateProgressBar(completedBar, 0);
-            processingBar.classList.remove('processing-lightgreen');
+        cancelButton.style.display = 'none';
 
-            if (wakeLock !== null) {
-                await releaseWakeLock();
-            }
-
-            cancelButton.style.display = 'none';
-
-            console.log('Session cleared.');
-        };
-
-        getAllKeysRequest.onerror = (event) => {
-            console.error('Error getting keys from IndexedDB:', event.target.errorCode);
-        };
-
+        console.log('Session cleared.');
     } catch (error) {
         console.error('Error clearing session:', error);
     }

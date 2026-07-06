@@ -36,33 +36,34 @@ export async function saveAppSettings(text) {
     
     setCookie('openai-voice', document.getElementById('openai-voice-select').value);
     setCookie('hd-audio', document.getElementById('hd-audio').checked);
-    setCookie('piper-voice-select', document.getElementById('piper-voice-select').value);
     setCookie('nabu-casa-voice-select', document.getElementById('nabu-casa-voice-select').value);
-    
+    setCookie('kokoro-voice-select', document.getElementById('kokoro-voice-select').value);
+
     return activeTTSTab;
 }
 
 export async function loadAppSettings() {
     // Load app settings
     const activeTTSTab = setActiveTTSTabOnInit();
-    
+
     document.getElementById('openai-voice-select').value = getCookie('openai-voice') || document.getElementById('openai-voice-select').value;
     document.getElementById('hd-audio').checked = getCookie('hd-audio') === 'true';
 
-    // See piper-tts.js. The cookie updates the select as it loads.
-    //document.getElementById('piper-voice-select').value = getCookie('piper-voice-select') || "en_US-joe-medium";
+    // See kokoro-tts.js / nabu-casa-tts.js: their voice selects are restored
+    // from cookies as they are populated.
 
-    // See nabu-casa-tts.js. The cookie updates the select as it loads.
-    //document.getElementById('nabu-casa-voice-select').value = getCookie('nabu-casa-voice-select');
-
-
-    return [activeTTSTab, document.getElementById('piper-voice-select').value];
+    return activeTTSTab;
 }
 
 // Function to set the active tab when loading app settings
 function setActiveTTSTabOnInit() {
     const tabs = document.querySelectorAll('#tts-engine-tabs .tab-button');
-    const activeTTSTab = getCookie('active-tts-engine') || 'piper';
+    let activeTTSTab = getCookie('active-tts-engine') || 'kokoro';
+
+    // Cookies may reference an engine that no longer exists (e.g. 'piper')
+    if (!Array.from(tabs).some(tab => tab.getAttribute('data-tab') === activeTTSTab)) {
+        activeTTSTab = 'kokoro';
+    }
 
     tabs.forEach(tab => {
         if (tab.getAttribute('data-tab') === activeTTSTab) {
